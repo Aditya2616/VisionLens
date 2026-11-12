@@ -27,6 +27,15 @@ def build_prompt(facts: Facts) -> list[dict]:
     ]
 
 
+def trim_to_sentence(text: str) -> str:
+    """Drop a dangling half sentence left by the token limit."""
+    if text and text[-1] not in ".!?":
+        cut = text.rfind(".")
+        if cut > 40:
+            return text[: cut + 1]
+    return text
+
+
 class LocalLLMDescriber:
     name = "llm"
 
@@ -79,7 +88,7 @@ class LocalLLMDescriber:
         th.join()
         return DescriptionVariant(
             source="llm",
-            text="".join(chunks).strip(),
+            text=trim_to_sentence("".join(chunks).strip()),
             model=self.model_id,
             seconds=round(time.perf_counter() - t0, 1),
         )

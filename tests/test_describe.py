@@ -126,6 +126,15 @@ def test_a_crashing_model_never_breaks_the_description():
     assert d.used == "template" and "out of memory" in (d.model.rejected_reason or "")
 
 
+def test_trim_to_sentence_drops_a_cut_off_tail():
+    from visionlens.describe.llm import trim_to_sentence
+
+    cut = trim_to_sentence("Person 1 left the scene at 0:09 after a while. Car 2 then ent")
+    assert cut == "Person 1 left the scene at 0:09 after a while."
+    assert trim_to_sentence("Complete sentence here.") == "Complete sentence here."
+    assert trim_to_sentence("short") == "short"
+
+
 def test_image_description():
     dets = [
         Detection(box=(0, 0, 50, 90), score=0.9, cls="person"),

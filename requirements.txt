@@ -5,6 +5,7 @@ opencv-python-headless>=4.9
 pillow>=10
 pydantic>=2.5
 torch>=2.2
+torchvision>=0.17  # transformers image processors require it
 transformers>=4.57
 fastapi>=0.110
 uvicorn>=0.27
