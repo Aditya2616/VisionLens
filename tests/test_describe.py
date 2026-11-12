@@ -148,6 +148,7 @@ def test_image_description():
 
 def test_openai_adapter_with_stubbed_transport(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
     seen = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -164,6 +165,7 @@ def test_openai_adapter_with_stubbed_transport(monkeypatch):
 
 def test_anthropic_adapter_with_stubbed_transport(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["x-api-key"] == "k"
@@ -180,3 +182,14 @@ def test_hosted_adapters_require_keys(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
         OpenAIDescriber().describe(make_facts())
+
+
+@pytest.mark.parametrize("name", ["OPENAI", "ANTHROPIC"])
+def test_hosted_adapters_need_an_explicit_model_id(monkeypatch, name):
+    monkeypatch.setenv(f"{name}_API_KEY", "k")
+    monkeypatch.delenv(f"{name}_MODEL", raising=False)
+    cls = {"OPENAI": OpenAIDescriber, "ANTHROPIC": AnthropicDescriber}[name]
+    with pytest.raises(RuntimeError, match=f"{name}_MODEL"):
+        cls().describe(make_facts())
+    # a constructor argument is enough
+    assert cls(model="test-model").model == "test-model"

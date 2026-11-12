@@ -294,7 +294,9 @@ data/samples.json credits for the sample clips
   rewrite, not a better describer.
 - CPU timings in this README were measured while other jobs shared the CPU (see the load note above), so they are
   pessimistic. GPU timings came from a GPU shared with other jobs.
-- The hosted describers (OpenAI, Anthropic; see `.env.example`) are adapters tested against a stubbed HTTP transport
+- The hosted describers (OpenAI, Anthropic; see `.env.example`) take their key and model id from `OPENAI_API_KEY` /
+  `OPENAI_MODEL` and `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` (or a constructor argument); there is no default model id,
+  and selecting one without it gives a clear configuration error (the description then falls back to the template). They are adapters tested against a stubbed HTTP transport
   only. I have not run them against the real services.
 - Tested paths that ran for real: D-FINE nano, small and RT-DETR r18vd inference, the local Qwen2.5-0.5B rewrite, the
   server, uploads and the webcam under Chromium's fake camera.

@@ -18,21 +18,33 @@ from .llm import SYSTEM
 
 def _user_prompt(facts: Facts) -> str:
     bullets = "\n".join(f"- {s.text}" for s in facts.sentences)
-    return f"Facts:\n{bullets}\n\nWrite the description."
+    return f"Facts:\n{bullets}\n\nWrite the paragraph."
+
+
+class ConfigError(RuntimeError):
+    """A hosted describer was selected without the settings it needs."""
+
+
+def _require(value: str, env: str, what: str) -> str:
+    if not value:
+        raise ConfigError(f"{env} is not set: set it to {what}")
+    return value
 
 
 class OpenAIDescriber:
     name = "openai"
 
-    def __init__(self, transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(
+        self, transport: httpx.BaseTransport | None = None, model: str | None = None
+    ) -> None:
         self.key = os.environ.get("OPENAI_API_KEY", "")
-        self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        self.model = model or os.environ.get("OPENAI_MODEL", "")
         self.base = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
         self.transport = transport
 
     def describe(self, facts: Facts, on_token: TokenCallback | None = None) -> DescriptionVariant:
-        if not self.key:
-            raise RuntimeError("OPENAI_API_KEY is not set")
+        _require(self.key, "OPENAI_API_KEY", "your API key")
+        _require(self.model, "OPENAI_MODEL", "the model id you want to use")
         t0 = time.perf_counter()
         with httpx.Client(transport=self.transport, timeout=60) as client:
             r = client.post(
@@ -59,15 +71,17 @@ class OpenAIDescriber:
 class AnthropicDescriber:
     name = "anthropic"
 
-    def __init__(self, transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(
+        self, transport: httpx.BaseTransport | None = None, model: str | None = None
+    ) -> None:
         self.key = os.environ.get("ANTHROPIC_API_KEY", "")
-        self.model = os.environ.get("ANTHROPIC_MODEL", "test-model")
+        self.model = model or os.environ.get("ANTHROPIC_MODEL", "")
         self.base = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com").rstrip("/")
         self.transport = transport
 
     def describe(self, facts: Facts, on_token: TokenCallback | None = None) -> DescriptionVariant:
-        if not self.key:
-            raise RuntimeError("ANTHROPIC_API_KEY is not set")
+        _require(self.key, "ANTHROPIC_API_KEY", "your API key")
+        _require(self.model, "ANTHROPIC_MODEL", "the model id you want to use")
         t0 = time.perf_counter()
         with httpx.Client(transport=self.transport, timeout=60) as client:
             r = client.post(
