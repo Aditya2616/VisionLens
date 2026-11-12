@@ -1,0 +1,426 @@
+{
+  "machine": {
+    "cpu": "AMD Ryzen 5 8500G w/ Radeon 740M Graphics",
+    "logical_cores": 12,
+    "threads_used": 3,
+    "python": "3.13.15",
+    "torch": "2.11.0+cpu",
+    "transformers": "5.7.0",
+    "opencv": "5.0.0",
+    "os": "Windows-11-10.0.26300-SP0",
+    "date": "2026-11-12",
+    "load_note": "Measured on a shared workstation while several other jobs (model training and evaluation from other projects) were running on the same CPU; treat timings as pessimistic and re-run on a quiet machine."
+  },
+  "detectors": [
+    {
+      "model": "dfine-nano",
+      "input_size": 640,
+      "params_m": 3.8,
+      "ms_median": 9430.4,
+      "ms_p95": 12574.2,
+      "fps_median": 0.11,
+      "frames": 37,
+      "detections_per_frame": 44.51
+    },
+    {
+      "model": "dfine-nano",
+      "input_size": 480,
+      "params_m": 3.8,
+      "ms_median": 2690.0,
+      "ms_p95": 3368.8,
+      "fps_median": 0.37,
+      "frames": 37,
+      "detections_per_frame": 42.11
+    },
+    {
+      "model": "dfine-nano",
+      "input_size": 320,
+      "params_m": 3.8,
+      "ms_median": 2247.6,
+      "ms_p95": 2595.8,
+      "fps_median": 0.44,
+      "frames": 37,
+      "detections_per_frame": 26.68
+    },
+    {
+      "model": "dfine-small",
+      "input_size": 640,
+      "params_m": 10.3,
+      "ms_median": 4136.8,
+      "ms_p95": 9717.2,
+      "fps_median": 0.24,
+      "frames": 37,
+      "detections_per_frame": 47.16
+    },
+    {
+      "model": "rtdetr-r18",
+      "input_size": 640,
+      "params_m": 20.2,
+      "ms_median": 3414.3,
+      "ms_p95": 7601.2,
+      "fps_median": 0.29,
+      "frames": 37,
+      "detections_per_frame": 29.89
+    }
+  ],
+  "tracker": {
+    "scenes": [
+      "crossing",
+      "occlusion",
+      "crowd",
+      "street"
+    ],
+    "seeds": 3,
+    "seconds_per_scene": 10.0,
+    "gt_boxes_total": 9233,
+    "fps": 15.0,
+    "noise_levels": {
+      "0": {
+        "p_miss": 0.0,
+        "jitter": 0.0,
+        "p_low": 0.0,
+        "fp_per_frame": 0.0,
+        "seed": 0
+      },
+      "1": {
+        "p_miss": 0.05,
+        "jitter": 0.03,
+        "p_low": 0.1,
+        "fp_per_frame": 0.1,
+        "seed": 0
+      },
+      "2": {
+        "p_miss": 0.12,
+        "jitter": 0.06,
+        "p_low": 0.2,
+        "fp_per_frame": 0.3,
+        "seed": 0
+      },
+      "3": {
+        "p_miss": 0.25,
+        "jitter": 0.1,
+        "p_low": 0.3,
+        "fp_per_frame": 0.6,
+        "seed": 0
+      }
+    },
+    "noise_sweep": [
+      {
+        "level": 0,
+        "stride": 3,
+        "MOTA": 0.877,
+        "IDF1": 0.914,
+        "HOTA": 0.842,
+        "DetA": 0.849,
+        "AssA": 0.835,
+        "IDsw": 0.5,
+        "Frag": 1.583
+      },
+      {
+        "level": 1,
+        "stride": 3,
+        "MOTA": 0.855,
+        "IDF1": 0.864,
+        "HOTA": 0.76,
+        "DetA": 0.788,
+        "AssA": 0.735,
+        "IDsw": 1.083,
+        "Frag": 2.75
+      },
+      {
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.824,
+        "IDF1": 0.871,
+        "HOTA": 0.693,
+        "DetA": 0.7,
+        "AssA": 0.687,
+        "IDsw": 0.917,
+        "Frag": 4.083
+      },
+      {
+        "level": 3,
+        "stride": 3,
+        "MOTA": 0.655,
+        "IDF1": 0.733,
+        "HOTA": 0.519,
+        "DetA": 0.528,
+        "AssA": 0.513,
+        "IDsw": 4.0,
+        "Frag": 12.083
+      }
+    ],
+    "stride_sweep": [
+      {
+        "level": 2,
+        "stride": 1,
+        "MOTA": 0.899,
+        "IDF1": 0.793,
+        "HOTA": 0.713,
+        "DetA": 0.796,
+        "AssA": 0.644,
+        "IDsw": 3.083,
+        "Frag": 9.25
+      },
+      {
+        "level": 2,
+        "stride": 2,
+        "MOTA": 0.864,
+        "IDF1": 0.854,
+        "HOTA": 0.711,
+        "DetA": 0.746,
+        "AssA": 0.68,
+        "IDsw": 2.0,
+        "Frag": 5.0
+      },
+      {
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.824,
+        "IDF1": 0.871,
+        "HOTA": 0.693,
+        "DetA": 0.7,
+        "AssA": 0.687,
+        "IDsw": 0.917,
+        "Frag": 4.083
+      },
+      {
+        "level": 2,
+        "stride": 5,
+        "MOTA": 0.533,
+        "IDF1": 0.69,
+        "HOTA": 0.536,
+        "DetA": 0.471,
+        "AssA": 0.617,
+        "IDsw": 2.667,
+        "Frag": 4.25
+      },
+      {
+        "level": 2,
+        "stride": 8,
+        "MOTA": 0.111,
+        "IDF1": 0.331,
+        "HOTA": 0.276,
+        "DetA": 0.208,
+        "AssA": 0.379,
+        "IDsw": 4.0,
+        "Frag": 5.917
+      }
+    ],
+    "ablation": [
+      {
+        "variant": "ByteTrack-style (default)",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.824,
+        "IDF1": 0.871,
+        "HOTA": 0.693,
+        "DetA": 0.7,
+        "AssA": 0.687,
+        "IDsw": 0.917,
+        "Frag": 4.083
+      },
+      {
+        "variant": "no low-score second pass",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.811,
+        "IDF1": 0.85,
+        "HOTA": 0.67,
+        "DetA": 0.684,
+        "AssA": 0.658,
+        "IDsw": 1.417,
+        "Frag": 5.5
+      },
+      {
+        "variant": "+ observation-centric re-update",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.824,
+        "IDF1": 0.871,
+        "HOTA": 0.692,
+        "DetA": 0.699,
+        "AssA": 0.686,
+        "IDsw": 0.917,
+        "Frag": 3.917
+      },
+      {
+        "variant": "no class gating",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.822,
+        "IDF1": 0.869,
+        "HOTA": 0.691,
+        "DetA": 0.698,
+        "AssA": 0.685,
+        "IDsw": 1.25,
+        "Frag": 4.333
+      },
+      {
+        "variant": "no confirmation delay (min_hits=1)",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.818,
+        "IDF1": 0.87,
+        "HOTA": 0.704,
+        "DetA": 0.702,
+        "AssA": 0.708,
+        "IDsw": 1.417,
+        "Frag": 4.417
+      },
+      {
+        "variant": "naive IoU baseline (no motion model)",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.634,
+        "IDF1": 0.287,
+        "HOTA": 0.269,
+        "DetA": 0.531,
+        "AssA": 0.139,
+        "IDsw": 43.25,
+        "Frag": 47.667
+      }
+    ],
+    "per_scene": [
+      {
+        "scene": "crossing",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.791,
+        "IDF1": 0.783,
+        "HOTA": 0.652,
+        "DetA": 0.676,
+        "AssA": 0.629,
+        "IDsw": 2.0,
+        "Frag": 9.0
+      },
+      {
+        "scene": "occlusion",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.814,
+        "IDF1": 0.882,
+        "HOTA": 0.685,
+        "DetA": 0.694,
+        "AssA": 0.676,
+        "IDsw": 0.667,
+        "Frag": 3.0
+      },
+      {
+        "scene": "crowd",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.814,
+        "IDF1": 0.903,
+        "HOTA": 0.699,
+        "DetA": 0.688,
+        "AssA": 0.711,
+        "IDsw": 0.667,
+        "Frag": 3.0
+      },
+      {
+        "scene": "street",
+        "level": 2,
+        "stride": 3,
+        "MOTA": 0.876,
+        "IDF1": 0.916,
+        "HOTA": 0.736,
+        "DetA": 0.741,
+        "AssA": 0.731,
+        "IDsw": 0.333,
+        "Frag": 1.333
+      }
+    ]
+  },
+  "pipeline": {
+    "clip": "intersection.webm",
+    "frames": 80,
+    "fps_video": 10.0,
+    "resolution": "480x270",
+    "detector": "dfine-nano",
+    "input_size": 640,
+    "stride": 3,
+    "detect_calls": 27,
+    "detect_ms_mean": 545.7,
+    "detect_ms_p95": 1161.5,
+    "track_ms_mean": 0.719,
+    "wall_s": 14.98,
+    "fps_end_to_end": 5.34,
+    "tracks": 13,
+    "events": 38
+  },
+  "describer": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "cases": 8,
+    "rejected": 0,
+    "accepted": 8,
+    "rejection_rate": 0.0,
+    "mean_seconds": 46.4,
+    "rows": [
+      {
+        "case": "synthetic-crossing-0",
+        "accepted": true,
+        "reason": null,
+        "seconds": 62.9,
+        "chars": 568,
+        "text": "At 0:00, six people were tracked in the scene. Person 1 appeared in the scene and moved right at a steady pace. Person 2 appeared in the scene and moved left at a steady pace. Person 3 entered from the left and moved right at a steady pace. Person 4 entered from the right and moved left at a steady pace. Person 5 entered from the bottom and moved right at a steady pace. Person 6 entered from the left and moved left at a steady pace. At 0:03, person 2 and person 4 came close together for 3 seconds. At 0:03, person 1 and person 3 came close together for 2 seconds."
+      },
+      {
+        "case": "synthetic-crossing-1",
+        "accepted": true,
+        "reason": null,
+        "seconds": 40.0,
+        "chars": 567,
+        "text": "At 0:00, six people were tracked in the scene. Person 1 appeared in the scene and moved left at a steady pace. Person 2 appeared in the scene and moved right at a steady pace. Person 3 entered from the right and moved left at a steady pace. Person 4 entered from the left and moved right at a steady pace. Person 5 appeared in the scene and moved left at a steady pace. Person 6 entered from the right and moved right at a steady pace. At 0:03, person 1 and person 3 came close together for 3 seconds. At 0:03, person 2 and person 4 came close together for 2 seconds."
+      },
+      {
+        "case": "synthetic-occlusion-0",
+        "accepted": true,
+        "reason": null,
+        "seconds": 35.4,
+        "chars": 438,
+        "text": "At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, person 2 entered from the left and moved right at a steady pace. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:01, car 4 entered from the left and moved right at a steady pace. The busiest moment was at 0:01, with 4 in view. At 0:03, person 1 and person 3 came close together for 1 second."
+      },
+      {
+        "case": "synthetic-occlusion-1",
+        "accepted": true,
+        "reason": null,
+        "seconds": 31.4,
+        "chars": 475,
+        "text": "At 0:00, person 1 enters from the bottom and moves right slowly. Person 1 stops for 3 seconds. At 0:00, person 2 enters from the left and moves right at a steady pace. Person 3 enters from the right and moves left at a steady pace. At 0:01, car 4 enters from the left and moves right at a steady pace. At 0:03, person 1 and person 3 come close together for 1 second. At 0:04, person 2 and person 3 come close together for 1 second. At 0:04, person 1 leaves toward the bottom."
+      },
+      {
+        "case": "synthetic-crowd-0",
+        "accepted": true,
+        "reason": null,
+        "seconds": 33.7,
+        "chars": 471,
+        "text": "At 0:00, person 1 enters from the left and moves right slowly. At 0:01, person 2 appears in the scene and moves left at a steady pace. At 0:01, person 3 enters from the left and moves right at a steady pace. At 0:01, person 1 and person 3 come close together for 2 seconds. At 0:02, person 4 enters from the right and moves left slowly. At 0:02, person 5 appears in the scene and moves left at a steady pace. At 0:02, person 6 enters from the left and moves right slowly."
+      },
+      {
+        "case": "synthetic-crowd-1",
+        "accepted": true,
+        "reason": null,
+        "seconds": 58.7,
+        "chars": 585,
+        "text": "At 0:00, 10 people were tracked, with 9 individuals in view simultaneously. Person 1 entered from the left and moved right at a steady pace, while person 3 entered from the left and moved right slowly. Person 4 entered from the left and moved right at a steady pace. At 0:01, person 1 and person 3 came close together for 2 seconds. Person 1 and person 4 came close together for 7 seconds. Person 3 and person 4 came close together for 3 seconds. At 0:01, person 5 entered from the right and moved left at a steady pace. Person 6 entered from the right and moved left at a steady pace."
+      },
+      {
+        "case": "synthetic-street-0",
+        "accepted": true,
+        "reason": null,
+        "seconds": 70.1,
+        "chars": 608,
+        "text": "At 0:00, the scene is captured with 7 objects moving in view simultaneously: 4 people and 3 cars. Person 2 enters from the left, moves right at a steady pace, and person 3 appears in the scene and moves left slowly. Person 3 stops for 4 seconds. Person 4 enters from the left and moves right at a steady pace. Person 2 and person 4 come close together for 9 seconds. Car 5 enters from the left and moves right at a steady pace. Car 6 enters from the right and moves left at a steady pace. Person 7 enters from the right and moves left at a steady pace. Person 2 and person 7 come close together for 1 second."
+      },
+      {
+        "case": "synthetic-street-1",
+        "accepted": true,
+        "reason": null,
+        "seconds": 39.3,
+        "chars": 608,
+        "text": "At 0:00, the scene is captured with 7 objects moving in view simultaneously: 4 people and 3 cars. Person 2 enters from the left, moves right at a steady pace, and person 3 appears in the scene and moves left slowly. Person 3 stops for 4 seconds. Person 4 enters from the left and moves right at a steady pace. Person 2 and person 4 come close together for 9 seconds. Car 5 enters from the left and moves right at a steady pace. Car 6 enters from the right and moves left at a steady pace. Person 7 enters from the right and moves left at a steady pace. Person 2 and person 7 come close together for 1 second."
+      }
+    ]
+  }
+}
