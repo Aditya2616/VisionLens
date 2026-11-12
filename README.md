@@ -14,7 +14,7 @@ Live mode (local server, your own upload) and the synthetic clip with the ground
 
 ![Live mode](docs/assets/live-mode.png)
 
-<img src="docs/assets/phone-synthetic-ground-truth.png" width="300" alt="Phone, synthetic clip with ground truth">
+<img src="docs/assets/phone-synthetic-ground-truth.png" width="300" alt="Phone, synthetic clip with ground truth"> <img src="docs/assets/phone-selected-track.png" width="400" alt="Compact labels, one track selected with its whole trail">
 
 ## What it does
 
@@ -25,9 +25,12 @@ Live mode (local server, your own upload) and the synthetic clip with the ground
    algorithm (SciPy) for association, a second pass that rescues low-confidence boxes, class gating, and an optional
    OC-SORT-style re-update. No tracking library is used.
 3. **Describe.** Deterministic event extraction (enter, leave, move, linger, count change, proximity) is the source of
-   truth. A template turns the events into sentences. Optionally a small local language model rewrites them, and a
-   **faithfulness guard** rejects any rewrite that mentions a track, count or object that is not in the event list,
-   falling back to the template.
+   truth. A template summarises them the way a person would: an opening sentence with counts and the peak, then grouped
+   statements ("Three cars (1, 2, 3) and six people stayed where they were throughout"), then the notable individual
+   events in time order, capped in length with the rest folded into a closing count. Every sentence keeps the ids of
+   the events it states, so tapping it highlights them. Optionally a small local language model rewrites the text, and
+   a **faithfulness guard** rejects any rewrite whose objects, counts, times, directions or event verbs are not
+   supported by the event list, falling back to the template.
 
 The web UI draws everything from the pipeline's real output: a lime scanner sweep reveals each box with its label and
 confidence, raw detections can be flipped against tracks to see what the tracker adds, an event timeline scrubs and
@@ -111,6 +114,15 @@ timings (the page says so in the badge tooltip).
 <!-- RESULTS:machine:start -->
 Measured on AMD Ryzen 5 8500G w/ Radeon 740M Graphics (12 logical cores; 3 threads used), PyTorch 2.11.0+cu128 (CPU rows forced to the CPU), transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15, 2026-11-12. Load: CPU rows: 3 threads, measured on a shared workstation whose CPU was saturated by other jobs (model training and evaluation), so they are pessimistic. GPU rows: RTX 5060 Ti, float32 detector, float16 language model, 2-3 CPU threads for pre- and post-processing; the GPU was shared with other jobs.
 <!-- RESULTS:machine:end -->
+
+**Load observed by the benchmark itself** (sampled before and after each group):
+<!-- RESULTS:load:start -->
+describer: CPU 100% busy, GPU 26% busy, 7040 of 16311 MB used before, CPU 88% busy, GPU 55% busy, 9104 of 16311 MB used after
+<!-- RESULTS:load:end -->
+
+The CPU timings below were taken while the CPU was busy with other work, so they are provisional: they are what this
+machine did under that load, not what the models can do on an idle CPU. A clean idle-machine run replaces them (same
+command). The GPU columns are labelled with device and precision.
 
 ### Detector speed
 
@@ -202,16 +214,38 @@ Per scene (default tracker):
 ### The language-model rewrite and the guard
 
 <!-- RESULTS:describer:start -->
-`Qwen/Qwen2.5-0.5B-Instruct` rewrote the template facts of 8 synthetic scenes (greedy decoding, cuda / float16, 7.5 s each on average). The faithfulness guard accepted 8 and rejected 0 (rejection rate 0%). Rejected rewrites fall back to the template text.
+15 cases: all 12 synthetic scenes (4 types x 3 seeds, simulated detector) plus the 3 recorded clips, rewritten from the grouped template facts with greedy decoding.
+
+| Model | Guard accepted | Mean time per rewrite, GPU | Mean time per rewrite, CPU |
+|---|---|---|---|
+| Qwen/Qwen2.5-0.5B-Instruct | 13 / 15 (87%) | 9.92 s (cuda, float16) | 18.73 s (cpu, float32, 3 cases, CPU 47.3% busy) |
+| Qwen/Qwen2.5-1.5B-Instruct | 6 / 15 (40%) | 8.86 s (cuda, float16) | 45.6 s (cpu, float32, 3 cases, CPU 94.9% busy) |
 <!-- RESULTS:describer:end -->
 
-The guard is a lexical check (numbers, track ids, object names and counts must all appear in the event list). It
-cannot tell whether a paraphrase flipped a direction or merged two events, and I only read a few of the rewrites
-by eye: they were close copies of the template wording, so the rewrite added fluency at best. It cost a few seconds
-per clip on the GPU (float16) and would cost far more on a CPU, against none for the template.
+Why rewrites were rejected (counted over both models):
+<!-- RESULTS:describer_reasons:start -->
+5 x wrong or invented count, 5 x direction contradicts the events, 1 x object that was not tracked
+<!-- RESULTS:describer_reasons:end -->
 
-The template is the default describer everywhere (CLI, API, UI) because it is instant, deterministic and cannot
-invent anything. The model rewrite is an option (`--describer llm`, or the dropdown in live mode).
+What the guard checks, per sentence, against the typed event list and not against the template wording: every object
+mentioned exists with that class and group counts match the ids listed; counts and numbers appear in the facts; times
+lie within a second of an event of the objects mentioned; directions agree ("from the left" with the entry edge,
+"toward the right" with the exit edge or direction of travel, "moved right" with the direction); event verbs
+(entered, left, stayed or stopped, moved, came close together) are supported by an event of that kind. Tests feed it
+deliberately corrupted rewrites (flipped direction, wrong count, invented object, wrong time, an exit that never
+happened) and it must reject each one (`tests/test_describe_grouping.py`).
+
+It is still a lexical parser, not a proof. It cannot see an invented setting ("a busy city street"), and a rewrite
+that keeps every id, number, direction and verb consistent but drops or reorders facts passes. Reading the accepted
+rewrites, the 0.5B model mostly re-voices the template's sentences with a framing sentence added; it does not summarise
+much, whatever the prompt asks. So the rewrite adds some fluency and costs seconds per clip.
+
+**Choice by evidence.** Qwen2.5-0.5B is the model for the rewrite: the guard accepts more of its output than the 1.5B
+model's (the larger model writes more freely and is rejected more often) and it is faster on the CPU. The template stays
+the default describer everywhere (CLI, API, UI) because it is instant, deterministic and cannot invent anything; the
+rewrite is an option (`--describer llm`, or the dropdown in live mode) and runs on the GPU when there is one. In the
+recorded demo the Template tab opens first; the Model tab shows the real rewrite of each clip, with the guard verdict,
+or the labelled fallback when the guard rejected it.
 
 ## Design decisions
 

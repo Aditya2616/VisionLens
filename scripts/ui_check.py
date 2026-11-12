@@ -113,6 +113,8 @@ def run(mode: str, out: Path) -> int:
                 page.wait_for_timeout(1500)
                 page.screenshot(path=out / f"{name}-1-loaded.png")
                 check(page, f"{name} loaded", out, problems)
+                if page.locator("#rescan").is_disabled():
+                    problems.append(f"{name}: replay control is disabled")
 
                 page.click("#bigplay")
                 page.wait_for_timeout(900)
@@ -122,6 +124,26 @@ def run(mode: str, out: Path) -> int:
                 page.click('[data-layer="dets"]')
                 page.wait_for_timeout(500)
                 page.locator("#stage").screenshot(path=out / f"{name}-4-raw-vs-tracks.png")
+                page.click('[data-layer="dets"]')  # raw boxes off again
+                page.wait_for_timeout(300)
+                # tap a box: it becomes the selected track (white box, whole trail, timeline lane)
+                box = page.evaluate(
+                    "() => { const h = (window.__vl.overlay.hit || []).slice().sort("
+                    "(a, b) => (b.x2 - b.x1) * (b.y2 - b.y1) - (a.x2 - a.x1) * (a.y2 - a.y1))[0];"
+                    " return h ? [h.x1, h.y1, h.x2, h.y2] : null; }"
+                )
+                if box:
+                    ov = page.locator("#overlay").bounding_box()
+                    page.mouse.click(
+                        ov["x"] + (box[0] + box[2]) / 2, ov["y"] + (box[1] + box[3]) / 2
+                    )
+                    page.wait_for_timeout(400)
+                    sel = page.evaluate("window.__vl.overlay.selected.size")
+                    if sel != 1 or page.locator("#tl-tip").is_hidden():
+                        problems.append(f"{name}: tapping a box did not select its track")
+                    page.locator("#stage").screenshot(path=out / f"{name}-4b-selected.png")
+                else:
+                    problems.append(f"{name}: no boxes to tap")
                 page.click('[data-tab="model"]')
                 page.wait_for_timeout(1500)
                 page.screenshot(path=out / f"{name}-5-model-tab.png", full_page=True)

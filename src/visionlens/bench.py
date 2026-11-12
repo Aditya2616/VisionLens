@@ -14,15 +14,19 @@ import json
 import platform
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .metrics import evaluate
 from .schemas import Detection
 from .synth import SCENES, NoiseConfig, NoisyOracle, make_scene
-from .sysutil import cpu_name, gpu_name, limit_threads, resolve_device
+from .sysutil import cpu_name, gpu_name, limit_threads, observed_load, resolve_device
 from .track import ByteTracker, TrackerConfig
 from .track.iou import associate, iou_matrix
+
+if TYPE_CHECKING:
+    from .describe import Facts
 
 ROOT = Path(__file__).resolve().parents[2]
 CLIP = ROOT / "docs" / "demo" / "intersection.webm"
@@ -217,17 +221,19 @@ def bench_pipeline(
 
 
 # ----------------------------------------------------------------------------- describer
-def bench_describer(model_id: str | None = None, device: str | None = None) -> dict:
-    """Run the local LLM rewrite on several fact sets and count guard rejections."""
-    from .describe import Facts, TemplateDescriber, build_description
-    from .describe.llm import LocalLLMDescriber
+DESCRIBER_MODELS = ("Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct")
+
+
+def _describer_cases() -> list[tuple[str, Facts]]:
+    """All 12 synthetic scenes (4 types x 3 seeds, simulated detector) and the 3 recorded clips."""
+    from .describe import Facts, TemplateDescriber
     from .events import extract_events, summarize
     from .pipeline import Pipeline, PipelineConfig
+    from .schemas import Result
 
-    llm = LocalLLMDescriber(model_id, device=device)
     cases = []
     for name in SCENES:
-        for seed in (0, 1):
+        for seed in range(3):
             sc = make_scene(name, seed)
             p = Pipeline(NoisyOracle(sc, NoiseConfig.level(1, seed)), PipelineConfig(stride=2))
             for _ in p.process((i, i / sc.fps, None) for i in range(sc.n_frames)):
@@ -239,10 +245,30 @@ def bench_describer(model_id: str | None = None, device: str | None = None) -> d
                     Facts(sc.duration, sc.width, sc.height, ev, summarize(p.frames, sc.fps)),
                 )
             )
+    for clip in ("intersection", "traffic", "synthetic"):
+        path = ROOT / "docs" / "demo" / f"{clip}.json"
+        if path.exists():
+            r = Result.model_validate_json(path.read_text("utf-8"))
+            cases.append(
+                (
+                    f"recorded-{clip}",
+                    Facts(r.meta.duration, r.meta.width, r.meta.height, r.events, r.summary),
+                )
+            )
+    for _, facts in cases:
+        TemplateDescriber().describe(facts)
+    return cases
+
+
+def _run_model(model_id: str, device: str | None, cases, label: str) -> dict:
+    from .describe import build_description
+    from .describe.llm import LocalLLMDescriber
+    from .describe.template import TemplateDescriber
+
+    llm = LocalLLMDescriber(model_id, device=device)
     rows = []
     for name, facts in cases:
         tpl = TemplateDescriber().describe(facts)
-        t0 = time.perf_counter()
         d = build_description(facts, tpl, llm)
         mv = d.model
         assert mv is not None
@@ -251,24 +277,43 @@ def bench_describer(model_id: str | None = None, device: str | None = None) -> d
                 "case": name,
                 "accepted": mv.accepted,
                 "reason": mv.rejected_reason,
-                "seconds": round(time.perf_counter() - t0, 1),
+                "seconds": mv.seconds,
                 "chars": len(mv.text),
                 "text": mv.text,
+                "template": tpl.text,
             }
         )
-        print("describer", name, mv.accepted, mv.rejected_reason, flush=True)
-    rej = sum(1 for r in rows if not r["accepted"])
+        print(label, model_id, name, mv.accepted, mv.rejected_reason, mv.seconds, flush=True)
+    acc = sum(1 for r in rows if r["accepted"])
     return {
-        "model": llm.model_id,
+        "model": model_id,
         "device": llm.device,
         "dtype": llm.dtype,
         "cases": len(rows),
-        "rejected": rej,
-        "accepted": len(rows) - rej,
-        "rejection_rate": round(rej / len(rows), 3),
-        "mean_seconds": round(float(np.mean([r["seconds"] for r in rows])), 1),
+        "accepted": acc,
+        "rejected": len(rows) - acc,
+        "acceptance_rate": round(acc / len(rows), 3),
+        "mean_seconds": round(float(np.mean([r["seconds"] for r in rows])), 2),
         "rows": rows,
     }
+
+
+def bench_describer(device: str | None = None, cpu_cases: int = 3) -> dict:
+    """Rewrite the grouped template facts with each local model and count guard rejections.
+
+    The full set runs on the GPU in float16 when there is one. A few cases are also timed on the
+    CPU in float32 (threads as limited by the caller) because that is what a CPU-only user gets.
+    """
+    cases = _describer_cases()
+    out: dict = {"cases": [n for n, _ in cases], "models": []}
+    for model_id in DESCRIBER_MODELS:
+        r = _run_model(model_id, device, cases, "describer")
+        if r["device"] != "cpu":
+            sub = _run_model(model_id, "cpu", cases[:cpu_cases], "describer-cpu")
+            r["cpu"] = {k: sub[k] for k in ("device", "dtype", "cases", "mean_seconds")}
+            r["cpu"]["load"] = observed_load()
+        out["models"].append(r)
+    return out
 
 
 # ---------------------------------------------------------------------------------- main
@@ -284,13 +329,19 @@ def run_all(
     gpu = resolve_device(gpu_device)
     path = Path(out)
     results: dict = json.loads(path.read_text("utf-8")) if path.exists() else {}
-    results["machine"] = machine_info(n_threads, note)
+    if "machine" not in results or {"detectors", "pipeline"} - set(skip):
+        results["machine"] = machine_info(n_threads, note)
+    loads: dict = results.setdefault("load_observed", {})
+
+    def track_load(group: str, before: dict | None, after: dict | None = None) -> None:
+        loads[group] = {"before": before, "after": after or observed_load(0.5)}
 
     def save() -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(results, indent=2), "utf-8")
 
     if "detectors" not in skip:
+        before = observed_load()
         models = [
             ("dfine-nano", 640),
             ("dfine-nano", 480),
@@ -307,17 +358,22 @@ def run_all(
             results["detectors_gpu"] = bench_detectors(
                 models[:2] if quick else models, n_frames=15 if quick else 40, device=gpu
             )
-            save()
+        track_load("detectors", before)
+        save()
     if "tracker" not in skip:
         results["tracker"] = bench_tracker(seeds=1 if quick else 3)
         save()
     if "pipeline" not in skip:
+        before = observed_load()
         results["pipeline"] = bench_pipeline(device="cpu")
         if gpu != "cpu":
             results["pipeline_gpu"] = bench_pipeline(device=gpu)
+        track_load("pipeline", before)
         save()
     if "describer" not in skip:
+        before = observed_load()
         results["describer"] = bench_describer(device=gpu_device)
+        track_load("describer", before)
         save()
     save()
     return results

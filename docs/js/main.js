@@ -26,6 +26,7 @@ const el = {
 };
 
 const overlay = new Overlay(el.overlay);
+window.__vl = { overlay, state }; // handles for the headless UI check
 const desc = new DescriptionPanel({ onPickEvents: (ids, seek) => pickEvents(ids, seek) });
 const timeline = new Timeline($('#timeline'), $('#tl-canvas'), {
   onSeek: (t) => seekTo(t),
@@ -47,6 +48,7 @@ async function init() {
   state.index = index;
   setMode();
   renderClips();
+  wireClipFade();
   renderCredits();
   await loadClip(index.clips[0]);
   requestAnimationFrame(frame);
@@ -82,6 +84,18 @@ function renderClips() {
     b.addEventListener('click', () => loadClip(c));
     box.append(b);
   }
+}
+
+// Edge fades on the clip picker show there is more to scroll to, and hide when there is not.
+function wireClipFade() {
+  const box = $('#clips');
+  const update = () => {
+    box.classList.toggle('more-r', box.scrollLeft + box.clientWidth < box.scrollWidth - 6);
+    box.classList.toggle('more-l', box.scrollLeft > 6);
+  };
+  box.addEventListener('scroll', update, { passive: true });
+  new ResizeObserver(update).observe(box);
+  update();
 }
 
 function renderCredits() {
@@ -204,6 +218,13 @@ function wireUi() {
     if (e.key === ' ') { e.preventDefault(); togglePlay(); }
   });
 
+  // tap a box to select its track: trail, timeline lane, its events and the sentences that cite it
+  el.stage.addEventListener('click', (e) => {
+    if (e.target.closest('button, .busy, .note') || !state.result || state.cam) return;
+    const r = el.overlay.getBoundingClientRect();
+    selectTrack(overlay.pick(e.clientX - r.left, e.clientY - r.top));
+  });
+
   new IntersectionObserver((es) => { state.visible = es[0].isIntersecting; }, { threshold: 0.05 }).observe(el.stage);
   new ResizeObserver(() => { overlay.resize(); state.lastT = -1; }).observe(el.stage);
 
@@ -299,6 +320,29 @@ function pickEvents(ids, seek, ev) {
   clearTimeout(pickEvents._t);
   pickEvents._t = setTimeout(() => { tip.hidden = true; overlay.selected = new Set(); timeline.select(null); desc.highlight([]); state.lastT = -1; }, 4500);
   if (seek || ev) seekTo(Math.max(0, first.t - 0.2));
+  state.lastT = -1;
+}
+
+function selectTrack(id) {
+  const r = state.result;
+  clearTimeout(pickEvents._t);
+  const tip = $('#tl-tip');
+  if (id == null || !r || overlay.selected.has(id)) {
+    overlay.selected = new Set();
+    timeline.select(null);
+    desc.highlight([]);
+    tip.hidden = true;
+    state.lastT = -1;
+    return;
+  }
+  const evs = r.events.filter((e) => e.ids.includes(id));
+  const cls = (evs[0] && evs[0].classes[evs[0].ids.indexOf(id)]) || 'track';
+  overlay.selected = new Set([id]);
+  timeline.select({ id: null, ids: [id], eventIds: evs.map((e) => e.id) });
+  desc.highlight(evs.map((e) => e.id));
+  const shown = evs.filter((e) => e.kind !== 'count_change').slice(0, 3).map(describeEvent);
+  tip.textContent = `${cls} ${id}${shown.length ? ' · ' + shown.join(' | ') : ' · no events'}${evs.length > 3 ? ` | +${evs.length - 3}` : ''}`;
+  tip.hidden = false;
   state.lastT = -1;
 }
 

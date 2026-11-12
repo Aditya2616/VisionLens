@@ -13,10 +13,12 @@ from .base import Facts, TokenCallback
 DEFAULT_LLM = "Qwen/Qwen2.5-0.5B-Instruct"
 
 SYSTEM = (
-    "You write short, plain descriptions of what happens in a video from a list of facts. "
-    "Write one paragraph of 3 to 5 sentences. Use only the facts: keep every object name, track "
-    "number, count and time exactly as given, and do not add objects, numbers, places or reasons "
-    "that are not listed."
+    "You describe what happens in a short video using only a list of facts. Write one short, "
+    "natural paragraph of two to four sentences, the way a person would summarise the scene; do "
+    "not restate every fact, group things together and skip minor details. Keep every object name "
+    "with its number exactly as given (for example 'car 3' or 'three cars (1, 2, 3)'), and keep "
+    "directions (left, right, top, bottom) and times (like 0:04) exactly as given. Do not add "
+    "objects, numbers, places, causes or opinions that are not in the facts."
 )
 
 
@@ -24,7 +26,7 @@ def build_prompt(facts: Facts) -> list[dict]:
     bullets = "\n".join(f"- {s.text}" for s in facts.sentences)
     return [
         {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": f"Facts:\n{bullets}\n\nWrite the description."},
+        {"role": "user", "content": f"Facts:\n{bullets}\n\nWrite the paragraph."},
     ]
 
 

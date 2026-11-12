@@ -58,7 +58,7 @@ export class DescriptionPanel {
       this.guard.hidden = false;
       this.guard.classList.toggle('ok', m.accepted);
       this.guard.textContent = m.accepted
-        ? 'Guard: accepted. Every track, number and object in this text is in the event list.'
+        ? 'Guard: accepted. Objects, counts, times, directions and event verbs were checked against the event list.'
         : `Guard: rejected (${m.rejected_reason}). The template description is used instead.`;
     }
   }

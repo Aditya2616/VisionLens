@@ -6,7 +6,7 @@
   "llm_dtype": "float16",
   "detector": "dfine-nano",
   "stride": 2,
-  "note": "detector and language model ran on the GPU; the CPU was busy with other jobs",
+  "note": "detector and language model ran on the GPU (float16 for the model); the CPU and GPU were shared with other jobs",
   "clips": [
     {
       "id": "intersection",

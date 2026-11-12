@@ -93,7 +93,7 @@ h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: 
 /* clip chooser */
 .clips {
   display: flex; gap: 10px; overflow-x: auto; padding: 6px 0 14px; margin: 0 calc(var(--gut) * -1);
-  padding-left: var(--gut); padding-right: var(--gut); scroll-snap-type: x proximity; scrollbar-width: none;
+  padding-left: var(--gut); padding-right: var(--gut); scroll-snap-type: x proximity; scroll-padding-left: var(--gut); scrollbar-width: none;
 }
 .clips::-webkit-scrollbar { display: none; }
 .clip {
@@ -104,6 +104,9 @@ h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: 
 .clip b { display: block; font-weight: 500; font-size: 13.5px; line-height: 1.25; }
 .clip span { display: block; font-size: 10.5px; color: var(--dim); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
 .clip[aria-current="true"] { border-color: var(--lime); background: linear-gradient(180deg, var(--lime-soft), transparent 80%), var(--panel); }
+.clips.more-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); }
+.clips.more-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 40px); mask-image: linear-gradient(90deg, transparent, #000 40px); }
+.clips.more-l.more-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent); }
 .clip:hover { border-color: var(--line-2); }
 .clip[aria-current="true"]:hover { border-color: var(--lime); }
 
@@ -193,6 +196,10 @@ h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: 
 .chip[hidden] { display: none; }
 .chip[aria-pressed="true"] { color: var(--bone); border-color: rgba(215, 255, 63, 0.7); background: var(--lime-soft); }
 .chip.ghost { border-style: dashed; }
+/* the replay control is an action, not a toggle: solid lime outline and lime text */
+.chip.action { color: var(--lime); border-color: var(--lime); background: transparent; font-weight: 500; }
+.chip.action:hover:not(:disabled) { background: var(--lime-soft); }
+.chip.action:disabled { opacity: 0.35; cursor: default; }
 .chip:hover { border-color: var(--lime); }
 .sw { width: 14px; height: 10px; border: 1.5px solid currentColor; border-radius: 2px; display: inline-block; opacity: 0.9; }
 .sw.dash { border-style: dashed; }
@@ -207,7 +214,7 @@ h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: 
 .tl-head .dim { letter-spacing: 0.04em; text-align: right; }
 .timeline { position: relative; max-height: 230px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
 .timeline canvas { display: block; width: 100%; }
-.tl-tip { position: absolute; z-index: 3; left: 12px; right: 12px; bottom: 8px; padding: 8px 10px; font-size: 11px; background: rgba(7, 8, 10, 0.92); border: 1px solid rgba(215, 255, 63, 0.5); border-radius: 8px; }
+.tl-tip { position: absolute; z-index: 3; line-height: 1.4; left: 12px; right: 12px; bottom: 8px; padding: 8px 10px; font-size: 11px; background: rgba(7, 8, 10, 0.92); border: 1px solid rgba(215, 255, 63, 0.5); border-radius: 8px; }
 .tl-tip[hidden] { display: none; }
 
 /* cards */

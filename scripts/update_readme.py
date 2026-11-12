@@ -29,6 +29,24 @@ def blocks(res: dict) -> dict[str, str]:
         f"PyTorch {m['torch']} (CPU rows forced to the CPU), transformers {m['transformers']}, OpenCV {m['opencv']}, "
         f"Python {m['python']}, {m['date']}. Load: {m['load_note'] or 'not recorded'}"
     )
+    lo = res.get("load_observed", {})
+    if lo:
+
+        def fmt(x: dict | None) -> str:
+            x = x or {}
+            bits = []
+            if "cpu_busy_percent" in x:
+                bits.append(f"CPU {x['cpu_busy_percent']:.0f}% busy")
+            if "gpu_busy_percent" in x:
+                bits.append(
+                    f"GPU {x['gpu_busy_percent']}% busy, {x['gpu_mem_used_mb']} of {x['gpu_mem_total_mb']} MB used"
+                )
+            return ", ".join(bits) or "not recorded"
+
+        out["load"] = "; ".join(
+            f"{g}: {fmt(v.get('before'))} before, {fmt(v.get('after'))} after"
+            for g, v in lo.items()
+        )
     if "detectors" in res:
         gpu = {(d["model"], d["input_size"]): d for d in res.get("detectors_gpu", [])}
         rows = []
@@ -125,12 +143,56 @@ def blocks(res: dict) -> dict[str, str]:
         )
     if "describer" in res:
         d = res["describer"]
+        rows = []
+        for m in d["models"]:
+            cpu = m.get("cpu")
+            load = (cpu or {}).get("load", {}).get("cpu_busy_percent")
+            rows.append(
+                [
+                    m["model"],
+                    f"{m['accepted']} / {m['cases']} ({m['acceptance_rate']:.0%})",
+                    f"{m['mean_seconds']} s ({m['device']}, {m['dtype']})",
+                    f"{cpu['mean_seconds']} s ({cpu['device']}, {cpu['dtype']}, {cpu['cases']} cases, "
+                    f"CPU {load}% busy)"
+                    if cpu
+                    else "not run",
+                ]
+            )
         out["describer"] = (
-            f"`{d['model']}` rewrote the template facts of {d['cases']} synthetic scenes "
-            f"(greedy decoding, {d.get('device', 'cpu')} / {d.get('dtype', 'float32')}, {d['mean_seconds']} s each on average). The faithfulness guard "
-            f"accepted {d['accepted']} and rejected {d['rejected']} "
-            f"(rejection rate {d['rejection_rate']:.0%}). Rejected rewrites fall back to the "
-            "template text."
+            f"{len(d['cases'])} cases: all 12 synthetic scenes (4 types x 3 seeds, simulated detector) "
+            "plus the 3 recorded clips, rewritten from the grouped template facts with greedy decoding.\n\n"
+            + table(
+                [
+                    "Model",
+                    "Guard accepted",
+                    "Mean time per rewrite, GPU",
+                    "Mean time per rewrite, CPU",
+                ],
+                rows,
+            )
+        )
+        reasons: dict[str, int] = {}
+
+        def category(why: str) -> str:
+            if "count" in why or why.startswith("number"):
+                return "wrong or invented count"
+            if "disagrees" in why:
+                return "direction contradicts the events"
+            if "not a tracked object" in why:
+                return "object that was not tracked"
+            if why.startswith("time") or "duration" in why:
+                return "time or duration not in the events"
+            if why.startswith("claims"):
+                return "event verb not supported by the events"
+            return why
+
+        for m in d["models"]:
+            for r in m["rows"]:
+                if not r["accepted"]:
+                    key = category(r["reason"] or "")
+                    reasons[key] = reasons.get(key, 0) + 1
+        out["describer_reasons"] = ", ".join(
+            f"{n} x {k}" for k, n in sorted(reasons.items(), key=lambda kv: -kv[1])
         )
     return out
 

@@ -75,7 +75,7 @@
         <button type="button" class="chip" data-layer="trails" aria-pressed="true"><i class="sw line"></i>Trails</button>
         <button type="button" class="chip" data-layer="events" aria-pressed="true"><i class="sw ring"></i>Events</button>
         <button type="button" class="chip" data-layer="gt" aria-pressed="false" hidden><i class="sw box"></i>Ground truth</button>
-        <button type="button" class="chip ghost" id="rescan"><i class="sw scan"></i>Replay scan</button>
+        <button type="button" class="chip action" id="rescan"><i class="sw scan"></i>Replay scan</button>
       </div>
 
       <div class="timeline-wrap">
@@ -139,9 +139,9 @@ visionlens serve</code></pre>
   <section class="how">
     <h2 class="mono">HOW IT WORKS</h2>
     <ol>
-      <li><b>Detect.</b> D-FINE (a real-time DETR-family detector, Apache-2.0) runs on the CPU every few frames and returns boxes, classes and scores.</li>
+      <li><b>Detect.</b> D-FINE (a real-time DETR-family detector, Apache-2.0) runs every few frames (on a CPU or a GPU) and returns boxes, classes and scores.</li>
       <li><b>Track.</b> My own ByteTrack-style tracker predicts every box with a Kalman filter, matches by IoU with the Hungarian algorithm, and rescues low-score boxes in a second pass. That is why the solid boxes stay put while the dashed raw boxes flicker.</li>
-      <li><b>Describe.</b> The track history becomes typed events (enter, leave, move, linger, proximity). A deterministic template turns them into sentences; an optional small local language model may rewrite them, and a guard rejects any rewrite that invents a track, number or object.</li>
+      <li><b>Describe.</b> The track history becomes typed events (enter, leave, move, linger, proximity). A deterministic template groups them into a short summary; an optional small local language model may rewrite it, and a guard rejects any rewrite whose objects, counts, times, directions or verbs the events do not support.</li>
     </ol>
   </section>
 </main>

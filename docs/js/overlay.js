@@ -8,6 +8,7 @@ const EMBER = '#ff7a3d';
 const MONO = '"JetBrains Mono", ui-monospace, Consolas, monospace';
 const SCAN_MS = 1700;
 const TRAIL = 28; // frames
+const INITIAL = { person: 'P', car: 'C', bus: 'B', truck: 'T', bicycle: 'Y', motorcycle: 'M', dog: 'D', cat: 'A', bird: 'I', horse: 'H', boat: 'O', train: 'R' };
 
 export class Overlay {
   constructor(canvas) {
@@ -155,11 +156,13 @@ export class Overlay {
       if (!this._shown(t, sx, scanX)) continue;
       const arr = this.hist.get(t.id);
       const p = this.posIdx[fi].get(t.id);
-      const from = Math.max(0, p - TRAIL);
+      const sel = this.selected.has(t.id);
+      const quiet = this.selected.size > 0 && !sel ? 0.35 : 1;
+      const from = sel ? 0 : Math.max(0, p - TRAIL); // a selected track shows its whole path
       for (let q = from + 1; q <= p; q++) {
         const a = (q - from) / (p - from + 1);
-        ctx.strokeStyle = `rgba(215,255,63,${(0.08 + 0.55 * a).toFixed(3)})`;
-        ctx.lineWidth = (0.8 + 1.4 * a) * k;
+        ctx.strokeStyle = sel ? `rgba(255,255,255,${(0.25 + 0.7 * a).toFixed(3)})` : `rgba(215,255,63,${((0.08 + 0.55 * a) * quiet).toFixed(3)})`;
+        ctx.lineWidth = (sel ? 1.6 + 1.6 * a : 0.8 + 1.4 * a) * k;
         ctx.beginPath();
         ctx.moveTo(arr[q - 1][1] * sx, arr[q - 1][2] * sy);
         ctx.lineTo(arr[q][1] * sx, arr[q][2] * sy);
@@ -177,6 +180,8 @@ export class Overlay {
 
   _tracks(fr, sx, sy, k, scanX, now) {
     const { ctx } = this;
+    const items = [];
+    this.hit = [];
     for (const t of fr.tracks) {
       const [x1, y1, x2, y2] = t.box;
       const cx = ((x1 + x2) / 2) * sx;
@@ -191,7 +196,9 @@ export class Overlay {
       const pad = lerp(10 * k, 0, e);
       const bx = X1 - pad, by = Y1 - pad, bw = X2 - X1 + pad * 2, bh = Y2 - Y1 + pad * 2;
       const sel = this.selected.has(t.id);
-      const alpha = (t.detected ? 1 : 0.62) * e;
+      const dim = this.selected.size > 0 && !sel;
+      const alpha = (t.detected ? 1 : 0.62) * e * (dim ? 0.55 : 1);
+      this.hit.push({ id: t.id, x1: X1 / k, y1: Y1 / k, x2: X2 / k, y2: Y2 / k });
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = sel ? '#ffffff' : LIME;
@@ -209,26 +216,96 @@ export class Overlay {
         ctx.globalAlpha = 0.16 * e;
         ctx.fillStyle = LIME;
         ctx.fillRect(bx, by, bw, bh);
-        ctx.globalAlpha = alpha;
       }
-      // label chip: class, id and a confidence that counts up
-      const conf = (t.score * e).toFixed(2);
-      const label = `${t.cls} ${t.id}  ${conf}`;
-      ctx.font = `600 ${8.5 * k}px ${MONO}`;
-      const tw = ctx.measureText(label).width + 10 * k;
-      const ch = 14 * k;
-      let ly = by - ch - 2 * k;
-      if (ly < 2 * k) ly = by + 2 * k;
-      let lx = bx;
-      if (lx + tw > this.W - 2) lx = this.W - 2 - tw;
+      ctx.restore();
+      items.push({ t, e, alpha, sel, bx, by, bw, bh });
+    }
+    this._labels(items, k);
+  }
+
+  // Labels: compact chips (class initial + id) by default, the full label with confidence for the
+  // selected track and for large boxes. Chips are placed greedily without overlapping each other:
+  // above the box, then stacked upward, then inside it; a thin leader line shows which box a
+  // nudged chip belongs to.
+  _labels(items, k) {
+    const { ctx } = this;
+    const ch = 16 * k;
+    const gap = 2 * k;
+    const placed = [];
+    const hit = (r) => placed.some((p) => r.x < p.x + p.w + gap && r.x + r.w + gap > p.x && r.y < p.y + p.h + gap && r.y + r.h + gap > p.y);
+    ctx.font = `600 ${10 * k}px ${MONO}`;
+    ctx.textBaseline = 'middle';
+    const order = [...items].sort((a, b) => (b.sel - a.sel) || (b.bw * b.bh - a.bw * a.bh));
+    for (const it of order) {
+      const { t, e, sel } = it;
+      const big = it.bw / k >= 120 && it.bh / k >= 70;
+      const full = `${t.cls} ${t.id}  ${(t.score * e).toFixed(2)}`;
+      const compact = `${INITIAL[t.cls] || t.cls[0].toUpperCase()}${t.id}`;
+      const variants = sel || big ? [full, compact] : [compact];
+      let spot = null;
+      let text = '';
+      for (const v of variants) {
+        const w = ctx.measureText(v).width + 10 * k;
+        const xs = [it.bx, it.bx + it.bw - w, it.bx + it.bw / 2 - w / 2].map((x) => clamp(x, 2, this.W - w - 2));
+        for (let row = 0; row < 5 && !spot; row++) {
+          for (const x of xs) {
+            for (const y of [it.by - (ch + gap) * (row + 1), it.by + gap + (ch + gap) * row]) {
+              const r = { x, y, w, h: ch, row, above: y < it.by };
+              if (r.y < 1 || r.y + ch > this.H - 1 || hit(r)) continue;
+              spot = r;
+              text = v;
+              break;
+            }
+            if (spot) break;
+          }
+        }
+        if (spot) break;
+      }
+      ctx.save();
+      ctx.globalAlpha = it.alpha;
+      if (!spot) { // no room: a dot at the box corner keeps the box identifiable by position
+        ctx.fillStyle = sel ? '#ffffff' : LIME;
+        ctx.beginPath();
+        ctx.arc(it.bx + 3 * k, it.by + 3 * k, 2.5 * k, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        continue;
+      }
+      placed.push(spot);
+      const edgeY = spot.above ? spot.y + spot.h : spot.y;
+      const gapPx = spot.above ? it.by - (spot.y + spot.h) : spot.y - it.by;
+      if (gapPx > 4 * k) { // displaced: leader line to the box corner
+        ctx.strokeStyle = sel ? '#ffffff' : LIME;
+        ctx.lineWidth = 1 * k;
+        ctx.globalAlpha = it.alpha * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(spot.x + 6 * k, edgeY);
+        ctx.lineTo(it.bx + 2 * k, it.by);
+        ctx.stroke();
+        ctx.globalAlpha = it.alpha;
+      }
       ctx.fillStyle = sel ? '#ffffff' : LIME;
-      roundRect(ctx, Math.max(2, lx), ly, tw, ch, 3 * k);
+      roundRect(ctx, spot.x, spot.y, spot.w, spot.h, 3 * k);
       ctx.fill();
       ctx.fillStyle = '#07080a';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, Math.max(2, lx) + 5 * k, ly + ch / 2 + 0.5 * k);
+      ctx.fillText(text, spot.x + 5 * k, spot.y + spot.h / 2 + 0.5 * k);
       ctx.restore();
     }
+  }
+
+  // The track under a point (CSS pixels relative to the canvas), smallest box first, with a
+  // little slop so thumbs can hit small boxes.
+  pick(x, y) {
+    const slop = 8;
+    let best = null;
+    let bestA = Infinity;
+    for (const h of this.hit || []) {
+      if (x >= h.x1 - slop && x <= h.x2 + slop && y >= h.y1 - slop && y <= h.y2 + slop) {
+        const a = (h.x2 - h.x1) * (h.y2 - h.y1);
+        if (a < bestA) { best = h.id; bestA = a; }
+      }
+    }
+    return best;
   }
 
   _events(t, sx, sy, k) {

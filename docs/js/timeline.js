@@ -136,7 +136,7 @@ export class Timeline {
         if (li === undefined) continue;
         const y = top + li * LANE + LANE / 2;
         const x = this.x(e.t);
-        const hot = this.sel && this.sel.id === e.id;
+        const hot = this.sel && (this.sel.id === e.id || (this.sel.eventIds || []).includes(e.id));
         this._glyph(ctx, e.kind, x, y, hot);
         if (e.t_end && (e.kind === 'linger' || e.kind === 'proximity')) {
           ctx.strokeStyle = e.kind === 'proximity' ? EMBER : 'rgba(237,236,230,0.8)';

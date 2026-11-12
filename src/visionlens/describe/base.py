@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -38,92 +37,15 @@ class Describer(Protocol):
 
 
 # ----------------------------------------------------------------------------- guard
-_NUMBER_WORDS = {
-    "zero": 0,
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-    "eleven": 11,
-    "twelve": 12,
-}
-_NOUNS = {
-    "person": "person",
-    "people": "person",
-    "pedestrian": "person",
-    "pedestrians": "person",
-    "man": "person",
-    "woman": "person",
-    "men": "person",
-    "women": "person",
-    "child": "person",
-    "car": "car",
-    "cars": "car",
-    "vehicle": "car",
-    "vehicles": "car",
-    "truck": "truck",
-    "trucks": "truck",
-    "bus": "bus",
-    "buses": "bus",
-    "bicycle": "bicycle",
-    "bicycles": "bicycle",
-    "bike": "bicycle",
-    "bikes": "bicycle",
-    "cyclist": "bicycle",
-    "motorcycle": "motorcycle",
-    "dog": "dog",
-    "dogs": "dog",
-    "cat": "cat",
-    "cats": "cat",
-    "bird": "bird",
-    "birds": "bird",
-    "horse": "horse",
-    "boat": "boat",
-    "train": "train",
-}
-_LABEL_ID = re.compile(
-    r"\b(person|car|truck|bus|bicycle|motorcycle|dog|cat|bird|horse|boat|train)"
-    r"\s*#?(\d+)\b",
-    re.I,
-)
-
-
-def _ints(text: str) -> set[int]:
-    return {int(x) for x in re.findall(r"\d+", text)}
-
-
 def check_faithful(text: str, facts: Facts) -> tuple[bool, str | None]:
-    """Reject text that mentions a track, number or object class that is not in the facts.
+    """Reject text that the event list does not support (see describe/guard.py for the rules)."""
+    from .guard import check_faithful as _check
+    from .template import build_sentences
 
-    This is a deliberately cheap lexical check, not a semantic proof: it catches invented ids,
-    counts, times and objects, which are the failures small models actually produce here.
-    """
-    ftext = facts.text.lower()
-    low = text.lower()
-    allowed = _ints(ftext)
-    for n in _ints(low):
-        if n not in allowed:
-            return False, f"number {n} is not in the facts"
-    for w, v in _NUMBER_WORDS.items():
-        if re.search(rf"\b{w}\b", low) and v not in allowed:
-            return False, f"count '{w}' is not in the facts"
-    fact_pairs = {(m.group(1).lower(), int(m.group(2))) for m in _LABEL_ID.finditer(ftext)}
-    for m in _LABEL_ID.finditer(text):
-        if (m.group(1).lower(), int(m.group(2))) not in fact_pairs:
-            return False, f"'{m.group(0)}' is not a tracked object"
-    fact_classes = {_NOUNS[w] for w in re.findall(r"[a-z]+", ftext) if w in _NOUNS}
-    for w in re.findall(r"[a-z]+", low):
-        if w in _NOUNS and _NOUNS[w] not in fact_classes:
-            return False, f"object '{w}' is not in the facts"
-    if len(text.strip()) < 20:
-        return False, "text too short"
-    return True, None
+    facts_text = facts.text or " ".join(
+        s.text for s in build_sentences(facts.events, facts.duration, facts.summary)
+    )
+    return _check(text, facts.events, facts.summary, facts_text, facts.duration)
 
 
 # ------------------------------------------------------------------------ orchestration

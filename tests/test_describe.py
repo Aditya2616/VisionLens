@@ -70,8 +70,8 @@ def test_guard_accepts_faithful_text():
 @pytest.mark.parametrize(
     ("text", "key"),
     [
-        ("person 3 walked in at 0:02 and stayed for a long while", "number 3"),
-        ("At 0:07 person 1 waved at car 2 for a while in the evening", "number 7"),
+        ("person 3 walked in at 0:02 and stayed for a long while", "person 3"),
+        ("At 0:00 person 1 waved at car 2 for a while in the evening", "time 0:00"),
         ("Three people walked past the car 2 at 0:02 while it rained heavily", "three"),
         ("A dog ran past person 1 at 0:02 and then left towards the right", "dog"),
         ("car 1 drove through the scene at 0:04 toward the left side", "car 1"),

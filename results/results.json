@@ -432,79 +432,358 @@
     "events": 37
   },
   "describer": {
-    "model": "Qwen/Qwen2.5-0.5B-Instruct",
-    "device": "cuda",
-    "dtype": "float16",
-    "cases": 8,
-    "rejected": 0,
-    "accepted": 8,
-    "rejection_rate": 0.0,
-    "mean_seconds": 7.5,
-    "rows": [
+    "cases": [
+      "synthetic-crossing-0",
+      "synthetic-crossing-1",
+      "synthetic-crossing-2",
+      "synthetic-occlusion-0",
+      "synthetic-occlusion-1",
+      "synthetic-occlusion-2",
+      "synthetic-crowd-0",
+      "synthetic-crowd-1",
+      "synthetic-crowd-2",
+      "synthetic-street-0",
+      "synthetic-street-1",
+      "synthetic-street-2",
+      "recorded-intersection",
+      "recorded-traffic",
+      "recorded-synthetic"
+    ],
+    "models": [
       {
-        "case": "synthetic-crossing-0",
-        "accepted": true,
-        "reason": null,
-        "seconds": 10.1,
-        "chars": 568,
-        "text": "At 0:00, six people were tracked in the scene. Person 1 appeared in the scene and moved right at a steady pace. Person 2 appeared in the scene and moved left at a steady pace. Person 3 entered from the left and moved right at a steady pace. Person 4 entered from the right and moved left at a steady pace. Person 5 entered from the bottom and moved right at a steady pace. Person 6 entered from the left and moved left at a steady pace. At 0:03, person 2 and person 4 came close together for 3 seconds. At 0:03, person 1 and person 3 came close together for 2 seconds."
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "device": "cuda",
+        "dtype": "float16",
+        "cases": 15,
+        "accepted": 13,
+        "rejected": 2,
+        "acceptance_rate": 0.867,
+        "mean_seconds": 9.92,
+        "rows": [
+          {
+            "case": "synthetic-crossing-0",
+            "accepted": true,
+            "reason": null,
+            "seconds": 19.8,
+            "chars": 611,
+            "text": "The scene is set up with six people moving around in a room, each appearing and disappearing at different times. At 0:00, person 1 appears and moves right at a steady pace. Person 2 appears and moves left at a steady pace. Person 3 enters from the left and moves right at a steady pace. Person 4 enters from the right and moves left at a steady pace. Person 5 enters from the bottom and moves right at a steady pace. Person 6 enters from the left and moves left at a steady pace. At 0:03, person 2 and person 4 come close together for 3 seconds. At 0:03, person 1 and person 3 come close together for 2 seconds.",
+            "template": "6 objects were tracked over 10 seconds: 6 people. Up to 6 were in view at once. At 0:00, person 1 appeared in the scene and moved right at a steady pace. At 0:00, person 2 appeared in the scene and moved left at a steady pace. At 0:00, person 3 entered from the left and moved right at a steady pace. At 0:00, person 4 entered from the right and moved left at a steady pace. At 0:03, person 2 and person 4 came close together for 3 seconds. At 0:03, person 1 and person 3 came close together for 2 seconds. At 0:08, person 5 entered from the bottom and moved right at a steady pace. At 0:08, person 6 entered from the left and moved left at a steady pace. 9 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crossing-1",
+            "accepted": true,
+            "reason": null,
+            "seconds": 12.6,
+            "chars": 599,
+            "text": "The scene is set up with six people moving around in a room, each appearing and disappearing at different times. At 0:00, person 1 appears and moves left at a steady pace. Person 2 then moves right at a steady pace. Person 3 enters from the right and moves left at a steady pace. Person 4 enters from the left and moves right at a steady pace. At 0:03, person 1 and person 3 come close together for 3 seconds. At 0:03, person 2 and person 4 come close together for 2 seconds. At 0:08, person 5 appears and moves left at a steady pace. Person 6 enters from the right and moves right at a steady pace.",
+            "template": "6 objects were tracked over 10 seconds: 6 people. Up to 6 were in view at once. At 0:00, person 1 appeared in the scene and moved left at a steady pace. At 0:00, person 2 appeared in the scene and moved right at a steady pace. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:00, person 4 entered from the left and moved right at a steady pace. At 0:03, person 1 and person 3 came close together for 3 seconds. At 0:03, person 2 and person 4 came close together for 2 seconds. At 0:08, person 5 appeared in the scene and moved left at a steady pace. At 0:08, person 6 entered from the right and moved right at a steady pace. 9 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crossing-2",
+            "accepted": true,
+            "reason": null,
+            "seconds": 10.3,
+            "chars": 575,
+            "text": "The scene is set up with six people, each appearing and moving in the same direction for a brief period. At 0:00, person 1 appears and moves right at a steady pace. Person 2 appears and moves left at a steady pace. Person 3 enters from the left and moves right at a steady pace. Person 4 enters from the right and moves left at a steady pace. Person 5 appears and moves right at a steady pace. Person 6 appears and moves left at a steady pace. At 0:03, person 2 and person 4 come close together for 3 seconds. At 0:03, person 1 and person 3 come close together for 2 seconds.",
+            "template": "6 objects were tracked over 10 seconds: 6 people. Up to 6 were in view at once. At 0:00, person 1 appeared in the scene and moved right at a steady pace. At 0:00, person 2 appeared in the scene and moved left at a steady pace. At 0:00, person 3 entered from the left and moved right at a steady pace. At 0:00, person 4 entered from the right and moved left at a steady pace. At 0:03, person 2 and person 4 came close together for 3 seconds. At 0:03, person 1 and person 3 came close together for 2 seconds. At 0:08, person 5 appeared in the scene and moved right at a steady pace. At 0:08, person 6 appeared in the scene and moved left at a steady pace. 9 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-occlusion-0",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.7,
+            "chars": 462,
+            "text": "At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:05, person 1 and person 2 came close together for 3 seconds. Car 4 and person 2 left toward the right.",
+            "template": "4 objects were tracked over 10 seconds: 3 people and 1 car. Up to 4 were in view at once. At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:05, person 1 and person 2 came close together for 3 seconds. At 0:09, car 4 and person 2 left toward the right. 1 further event is shown on the timeline."
+          },
+          {
+            "case": "synthetic-occlusion-1",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.3,
+            "chars": 532,
+            "text": "At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:06, person 2 and person 5 came close together for 2 seconds. Person 5 appeared in the scene and moved right at a steady pace. Four further events are shown on the timeline.",
+            "template": "5 objects were tracked over 10 seconds: 4 people and 1 car. Up to 4 were in view at once. At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:06, person 2 and person 5 came close together for 2 seconds. At 0:06, person 5 appeared in the scene and moved right at a steady pace. 4 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-occlusion-2",
+            "accepted": true,
+            "reason": null,
+            "seconds": 7.4,
+            "chars": 462,
+            "text": "At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 1 stopped for 3 seconds. At 0:01, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:05, person 1 and person 2 came close together for 3 seconds. Car 4 and person 2 left toward the right.",
+            "template": "4 objects were tracked over 10 seconds: 3 people and 1 car. Up to 4 were in view at once. At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 1 stopped for 3 seconds. At 0:01, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:05, person 1 and person 2 came close together for 3 seconds. At 0:09, car 4 and person 2 left toward the right. 1 further event is shown on the timeline."
+          },
+          {
+            "case": "synthetic-crowd-0",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.1,
+            "chars": 475,
+            "text": "9 people were tracked over 10 seconds, with 9 people in view at once. At 0:00, person 1 entered from the left and moved right slowly. At 0:01, person 2 appeared in the scene and moved left at a steady pace. At 0:01, two people (3, 6) entered from the left and moved right. At 0:02, person 4 entered from the right and moved left slowly. At 0:02, person 5 appeared in the scene and moved left at a steady pace. At 0:02, two people (7, 8) entered from the left and moved right.",
+            "template": "9 objects were tracked over 10 seconds: 9 people. Up to 9 were in view at once. At 0:00, person 1 entered from the left and moved right slowly. At 0:01, person 2 appeared in the scene and moved left at a steady pace. At 0:01, two people (3, 6) entered from the left and moved right. At 0:02, person 4 entered from the right and moved left slowly. At 0:02, person 5 appeared in the scene and moved left at a steady pace. At 0:02, two people (7, 8) entered from the left and moved right. At 0:03, person 6 and person 8 came close together for 3 seconds. At 0:05, person 1 and person 8 came close together for 4 seconds. 27 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crowd-1",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.6,
+            "chars": 413,
+            "text": "At 0:00, three people (1, 3, 4) entered from the left and moved right. At 0:01, three people (2, 5, 6) entered from the right and moved left. At 0:01, person 1 and person 4 came close together for 7 seconds. At 0:02, two people (7, 8) entered from the right and moved left. At 0:03, person 5 and person 8 came close together for 5 seconds. At 0:03, person 9 entered from the left and moved right at a steady pace.",
+            "template": "10 objects were tracked over 10 seconds: 10 people. Up to 9 were in view at once. At 0:00, three people (1, 3, 4) entered from the left and moved right. At 0:01, three people (2, 5, 6) entered from the right and moved left. At 0:01, person 1 and person 4 came close together for 7 seconds. 13 other pairs also came close together. At 0:02, two people (7, 8) entered from the right and moved left. At 0:03, person 5 and person 8 came close together for 5 seconds. At 0:03, person 9 entered from the left and moved right at a steady pace. At 0:07, person 10 appeared in the scene and moved left at a steady pace. 8 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crowd-2",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.7,
+            "chars": 534,
+            "text": "In the short video, nine people were tracked over a period of 10 seconds. At 0:00, person 1 entered from the right and moved left at a steady pace. At 0:01, person 2 appeared in the scene and moved right at a steady pace. Two people (3, 4) entered from the left and moved right. At 0:01, person 3 and person 5 came close together for 4 seconds. Person 5 entered from the left and moved right slowly. At 0:02, person 3 and person 5 came close together for another 4 seconds. Person 5 entered from the left and moved right slowly again.",
+            "template": "9 objects were tracked over 10 seconds: 9 people. Up to 9 were in view at once. At 0:00, person 1 entered from the right and moved left at a steady pace. At 0:01, person 2 appeared in the scene and moved right at a steady pace. At 0:01, two people (3, 4) entered from the left and moved right. At 0:02, person 3 and person 5 came close together for 4 seconds. At 0:02, person 5 entered from the left and moved right slowly. At 0:03, two people (6, 7) appeared in the scene and moved right. At 0:04, person 5 and person 8 came close together for 4 seconds. At 0:06, two people (5, 6) stopped for 2 seconds. 21 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-street-0",
+            "accepted": false,
+            "reason": "count 'seven people' is not in the facts",
+            "seconds": 9.8,
+            "chars": 506,
+            "text": "Seven people and three cars were tracked over 10 seconds. Person 1 remained stationary. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 3 stopped for 4 seconds. At 0:00, person 2 and person 4 came close together for 9 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, car 1 and person 7 came close together for 1 second. Seven other pairs also came close together.",
+            "template": "7 objects were tracked over 10 seconds: 4 people and 3 cars. Up to 7 were in view at once. Car 1 stayed where it was throughout. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 3 stopped for 4 seconds. At 0:00, person 2 and person 4 came close together for 9 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, car 1 and person 7 came close together for 1 second. Seven other pairs also came close together. 4 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-street-1",
+            "accepted": false,
+            "reason": "count 'seven people' is not in the facts",
+            "seconds": 9.2,
+            "chars": 506,
+            "text": "Seven people and three cars were tracked over 10 seconds. Person 1 remained stationary. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 2 and person 4 came close together for 9 seconds. At 0:00, person 3 stopped for 4 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, car 1 and person 7 came close together for 1 second. Seven other pairs also came close together.",
+            "template": "7 objects were tracked over 10 seconds: 4 people and 3 cars. Up to 7 were in view at once. Car 1 stayed where it was throughout. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 2 and person 4 came close together for 9 seconds. At 0:00, person 3 stopped for 4 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, car 1 and person 7 came close together for 1 second. Seven other pairs also came close together. 4 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-street-2",
+            "accepted": true,
+            "reason": null,
+            "seconds": 9.1,
+            "chars": 571,
+            "text": "In the short video, seven objects were tracked over a period of 10 seconds. Four people and three cars were present simultaneously. Person 2 entered from the left and moved right at a steady pace. Person 4 appeared in the scene and moved left slowly. At 0:01, person 4 stopped for 3 seconds. Car 5 and person 6 entered from the left and moved right. Person 2 and person 6 came close together for 8 seconds. At 0:01, car 7 and person 8 entered from the right and moved left. Person 2 and person 6 came close together for 1 second. 11 more events are shown on the timeline.",
+            "template": "7 objects were tracked over 10 seconds: 4 people and 3 cars. Up to 7 were in view at once. Car 1 stayed where it was throughout. At 0:00, person 2 entered from the left and moved right at a steady pace. At 0:01, person 4 appeared in the scene and moved left slowly. At 0:01, person 4 stopped for 3 seconds. At 0:01, car 5 and person 6 entered from the left and moved right. At 0:01, person 2 and person 6 came close together for 8 seconds. At 0:02, car 7 and person 8 entered from the right and moved left. At 0:03, car 1 and person 8 came close together for 1 second. 11 further events are shown on the timeline."
+          },
+          {
+            "case": "recorded-intersection",
+            "accepted": true,
+            "reason": null,
+            "seconds": 9.4,
+            "chars": 503,
+            "text": "In the short video, we see a group of people and cars moving around in a busy city street. At 0:00, four people and three cars stay in view at once. At 0:00, person 5 and person 9 come close together for 8 seconds. At 0:00, person 7 enters from the right and moves right slowly. At 0:00, car 11 enters from the right and moves left slowly. At 0:00, car 11 stops for 2 seconds. At 0:00, person 8 and person 13 come close together for 7 seconds. At 0:01, person 14 appears in the scene and stays in place.",
+            "template": "15 objects were tracked over 8 seconds: 11 people and 4 cars. Up to 13 were in view at once. Four people (5, 8, 9, 12) and three cars (1, 2, 3) stayed where they were throughout. At 0:00, person 5 and person 9 came close together for 8 seconds. At 0:00, person 7 entered from the right and moved right slowly. At 0:00, car 11 entered from the right and moved left slowly. At 0:00, car 11 stopped for 2 seconds. At 0:00, person 8 and person 13 came close together for 7 seconds. At 0:01, person 14 appeared in the scene and stayed in place. At 0:03, person 15 appeared in the scene and stayed in place. 27 further events are shown on the timeline."
+          },
+          {
+            "case": "recorded-traffic",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.7,
+            "chars": 538,
+            "text": "The scene shows eight vehicles moving through a busy intersection. At 0:00, a bus enters from the top and moves right at a steady pace. At 0:02, another bus appears and moves right at a steady pace. At 0:02, a car enters from the bottom and moves right fast. At 0:04, a car and a truck enter from the bottom and move right. A truck and a car come close together for 2 seconds. At 0:04, a car and a truck come close together for 1 second. The scene then shows 7 more events, including a car and a truck coming close together for 2 seconds.",
+            "template": "8 objects were tracked over 8 seconds: 4 cars, 2 buses and 2 trucks. Up to 5 were in view at once. At 0:00, bus 1 entered from the top and moved right at a steady pace. At 0:02, bus 2 appeared in the scene and moved right at a steady pace. At 0:02, car 3 entered from the bottom and moved right fast. At 0:04, car 5 appeared in the scene and moved right at a steady pace. At 0:04, car 6 and truck 9 entered from the bottom and moved right. At 0:04, truck 8 entered from the bottom and stayed in place. At 0:04, car 6 and truck 9 came close together for 2 seconds. At 0:06, truck 9 and car 11 came close together for 1 second. 7 further events are shown on the timeline."
+          },
+          {
+            "case": "recorded-synthetic",
+            "accepted": true,
+            "reason": null,
+            "seconds": 10.1,
+            "chars": 525,
+            "text": "In the short video, seven objects were tracked over eight seconds, including four people and three cars. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 3 stopped for 3 seconds. At 0:01, person 2 and person 4 came close together for 7 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, person 2 and person 3 came close together for 1 second. Five other pairs also came close together.",
+            "template": "7 objects were tracked over 8 seconds: 4 people and 3 cars. Up to 7 were in view at once. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 3 stopped for 3 seconds. At 0:01, person 2 and person 4 came close together for 7 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, person 2 and person 3 came close together for 1 second. Five other pairs also came close together. At 0:07, car 5 and person 2 left toward the right. 4 further events are shown on the timeline."
+          }
+        ],
+        "cpu": {
+          "device": "cpu",
+          "dtype": "float32",
+          "cases": 3,
+          "mean_seconds": 18.73,
+          "load": {
+            "cpu_busy_percent": 47.3,
+            "gpu_busy_percent": 44,
+            "gpu_mem_used_mb": 8177,
+            "gpu_mem_total_mb": 16311
+          }
+        }
       },
       {
-        "case": "synthetic-crossing-1",
-        "accepted": true,
-        "reason": null,
-        "seconds": 6.9,
-        "chars": 567,
-        "text": "At 0:00, six people were tracked in the scene. Person 1 appeared in the scene and moved left at a steady pace. Person 2 appeared in the scene and moved right at a steady pace. Person 3 entered from the right and moved left at a steady pace. Person 4 entered from the left and moved right at a steady pace. Person 5 appeared in the scene and moved left at a steady pace. Person 6 entered from the right and moved right at a steady pace. At 0:03, person 1 and person 3 came close together for 3 seconds. At 0:03, person 2 and person 4 came close together for 2 seconds."
-      },
-      {
-        "case": "synthetic-occlusion-0",
-        "accepted": true,
-        "reason": null,
-        "seconds": 7.2,
-        "chars": 438,
-        "text": "At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, person 2 entered from the left and moved right at a steady pace. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:01, car 4 entered from the left and moved right at a steady pace. The busiest moment was at 0:01, with 4 in view. At 0:03, person 1 and person 3 came close together for 1 second."
-      },
-      {
-        "case": "synthetic-occlusion-1",
-        "accepted": true,
-        "reason": null,
-        "seconds": 7.8,
-        "chars": 475,
-        "text": "At 0:00, person 1 enters from the bottom and moves right slowly. Person 1 stops for 3 seconds. At 0:00, person 2 enters from the left and moves right at a steady pace. Person 3 enters from the right and moves left at a steady pace. At 0:01, car 4 enters from the left and moves right at a steady pace. At 0:03, person 1 and person 3 come close together for 1 second. At 0:04, person 2 and person 3 come close together for 1 second. At 0:04, person 1 leaves toward the bottom."
-      },
-      {
-        "case": "synthetic-crowd-0",
-        "accepted": true,
-        "reason": null,
-        "seconds": 7.1,
-        "chars": 471,
-        "text": "At 0:00, person 1 enters from the left and moves right slowly. At 0:01, person 2 appears in the scene and moves left at a steady pace. At 0:01, person 3 enters from the left and moves right at a steady pace. At 0:01, person 1 and person 3 come close together for 2 seconds. At 0:02, person 4 enters from the right and moves left slowly. At 0:02, person 5 appears in the scene and moves left at a steady pace. At 0:02, person 6 enters from the left and moves right slowly."
-      },
-      {
-        "case": "synthetic-crowd-1",
-        "accepted": true,
-        "reason": null,
-        "seconds": 6.5,
-        "chars": 520,
-        "text": "At 0:00, 10 people were tracked, with 9 individuals in view simultaneously. Person 1 entered from the left and moved right at a steady pace, while person 3 entered from the left and moved right slowly. Person 4 entered from the left and moved right at a steady pace. At 0:01, person 1 and person 3 came close together for 2 seconds. Person 1 and person 4 came close together for 7 seconds. Person 3 and person 4 came close together for 3 seconds. At 0:01, person 5 entered from the right and moved left at a steady pace."
-      },
-      {
-        "case": "synthetic-street-0",
-        "accepted": true,
-        "reason": null,
-        "seconds": 7.0,
-        "chars": 608,
-        "text": "At 0:00, the scene is captured with 7 objects moving in view simultaneously: 4 people and 3 cars. Person 2 enters from the left, moves right at a steady pace, and person 3 appears in the scene and moves left slowly. Person 3 stops for 4 seconds. Person 4 enters from the left and moves right at a steady pace. Person 2 and person 4 come close together for 9 seconds. Car 5 enters from the left and moves right at a steady pace. Car 6 enters from the right and moves left at a steady pace. Person 7 enters from the right and moves left at a steady pace. Person 2 and person 7 come close together for 1 second."
-      },
-      {
-        "case": "synthetic-street-1",
-        "accepted": true,
-        "reason": null,
-        "seconds": 7.2,
-        "chars": 608,
-        "text": "At 0:00, the scene is captured with 7 objects moving in view simultaneously: 4 people and 3 cars. Person 2 enters from the left, moves right at a steady pace, and person 3 appears in the scene and moves left slowly. Person 3 stops for 4 seconds. Person 4 enters from the left and moves right at a steady pace. Person 2 and person 4 come close together for 9 seconds. Car 5 enters from the left and moves right at a steady pace. Car 6 enters from the right and moves left at a steady pace. Person 7 enters from the right and moves left at a steady pace. Person 2 and person 7 come close together for 1 second."
+        "model": "Qwen/Qwen2.5-1.5B-Instruct",
+        "device": "cuda",
+        "dtype": "float16",
+        "cases": 15,
+        "accepted": 6,
+        "rejected": 9,
+        "acceptance_rate": 0.4,
+        "mean_seconds": 8.86,
+        "rows": [
+          {
+            "case": "synthetic-crossing-0",
+            "accepted": false,
+            "reason": "'the right' disagrees with the exit edge or direction of travel",
+            "seconds": 11.2,
+            "chars": 630,
+            "text": "Six people were observed moving across the scene over ten seconds. Person 1 started at the top left corner and moved steadily to the right. Person 2 began at the bottom left corner and moved steadily to the right. Person 3 entered from the left and moved steadily to the right. Person 4 entered from the right and moved steadily to the left. At 0:03, person 2 and person 4 got very close together for three seconds. At 0:03, person 1 and person 3 also got very close together for two seconds. At 0:08, person 5 entered from the bottom and moved steadily to the right. Person 6 entered from the left and moved steadily to the left.",
+            "template": "6 objects were tracked over 10 seconds: 6 people. Up to 6 were in view at once. At 0:00, person 1 appeared in the scene and moved right at a steady pace. At 0:00, person 2 appeared in the scene and moved left at a steady pace. At 0:00, person 3 entered from the left and moved right at a steady pace. At 0:00, person 4 entered from the right and moved left at a steady pace. At 0:03, person 2 and person 4 came close together for 3 seconds. At 0:03, person 1 and person 3 came close together for 2 seconds. At 0:08, person 5 entered from the bottom and moved right at a steady pace. At 0:08, person 6 entered from the left and moved left at a steady pace. 9 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crossing-1",
+            "accepted": false,
+            "reason": "'the right' disagrees with the exit edge or direction of travel",
+            "seconds": 12.1,
+            "chars": 644,
+            "text": "Six people were observed moving across the scene over ten seconds. Person 1 started at the left edge and moved steadily towards the right. Person 2 began at the right edge and moved towards the left. Person 3 entered from the right and moved left, while person 4 entered from the left and moved right. At 0:03, person 1 and person 3 got close together for three seconds, then separated again. Similarly, at 0:03, person 2 and person 4 got close together for two seconds before separating. At 0:08, person 5 appeared from the left and moved left, while person 6 entered from the right and moved right. Nine more events are shown on the timeline.",
+            "template": "6 objects were tracked over 10 seconds: 6 people. Up to 6 were in view at once. At 0:00, person 1 appeared in the scene and moved left at a steady pace. At 0:00, person 2 appeared in the scene and moved right at a steady pace. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:00, person 4 entered from the left and moved right at a steady pace. At 0:03, person 1 and person 3 came close together for 3 seconds. At 0:03, person 2 and person 4 came close together for 2 seconds. At 0:08, person 5 appeared in the scene and moved left at a steady pace. At 0:08, person 6 entered from the right and moved right at a steady pace. 9 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crossing-2",
+            "accepted": false,
+            "reason": "'from the left' disagrees with the entry edge",
+            "seconds": 9.4,
+            "chars": 601,
+            "text": "Six people were observed moving across the scene over ten seconds. Person 1 started at the left edge and moved steadily to the right. Person 2 began at the right edge and moved towards the left. Person 3 entered from the left and moved right, while person 4 entered from the right and moved left. After three seconds, person 2 and person 4 got very close together, then person 1 and person 3 did the same. Later, person 5 appeared from the left and moved right, followed by person 6 who appeared from the right and moved left. Nine more interactions between pairs of people were shown on the timeline.",
+            "template": "6 objects were tracked over 10 seconds: 6 people. Up to 6 were in view at once. At 0:00, person 1 appeared in the scene and moved right at a steady pace. At 0:00, person 2 appeared in the scene and moved left at a steady pace. At 0:00, person 3 entered from the left and moved right at a steady pace. At 0:00, person 4 entered from the right and moved left at a steady pace. At 0:03, person 2 and person 4 came close together for 3 seconds. At 0:03, person 1 and person 3 came close together for 2 seconds. At 0:08, person 5 appeared in the scene and moved right at a steady pace. At 0:08, person 6 appeared in the scene and moved left at a steady pace. 9 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-occlusion-0",
+            "accepted": false,
+            "reason": "count 'four people' is not in the facts",
+            "seconds": 10.2,
+            "chars": 581,
+            "text": "Four people and one car were observed moving across the scene over ten seconds. Person 1 started by entering from the bottom and moving right slowly, stopping for three seconds before continuing. Car 4 and person 2 then entered from the left and moved right, coming into view alongside person 1. Person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for one second, followed by two other pairs. By 0:05, person 1 and person 2 came close together for three seconds. Car 4 and person 2 then left toward the right at 0:09.",
+            "template": "4 objects were tracked over 10 seconds: 3 people and 1 car. Up to 4 were in view at once. At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:05, person 1 and person 2 came close together for 3 seconds. At 0:09, car 4 and person 2 left toward the right. 1 further event is shown on the timeline."
+          },
+          {
+            "case": "synthetic-occlusion-1",
+            "accepted": false,
+            "reason": "count 'five people' is not in the facts",
+            "seconds": 10.1,
+            "chars": 606,
+            "text": "Five people and one car were observed moving across the scene over ten seconds. Person 1 started by entering from the bottom and moving right slowly, stopping for three seconds before continuing. Car 4 and person 2 then entered from the left, moving right. Person 3 followed from the right, moving left at a steady pace. At 0:03, person 1 and person 3 came close together for one second, while two other pairs also did so. At 0:06, person 2 and person 5 came close together for two seconds, with person 5 appearing in the scene and moving right at a steady pace. Four more events are shown on the timeline.",
+            "template": "5 objects were tracked over 10 seconds: 4 people and 1 car. Up to 4 were in view at once. At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, person 1 stopped for 3 seconds. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:06, person 2 and person 5 came close together for 2 seconds. At 0:06, person 5 appeared in the scene and moved right at a steady pace. 4 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-occlusion-2",
+            "accepted": false,
+            "reason": "count 'four people' is not in the facts",
+            "seconds": 9.0,
+            "chars": 539,
+            "text": "Four people and one car were observed moving across the scene over ten seconds. Person 1 started by entering from the bottom and moving right slowly. Car 4 and person 2 then entered from the left and moved right. Person 1 paused for three seconds before continuing. Person 3 joined from the right and moved left at a steady pace. They came close together with person 1 and person 3 for one second, and another pair did the same. Person 1 and person 2 got close for three seconds at 0:05. Car 4 and person 2 exited toward the right at 0:09.",
+            "template": "4 objects were tracked over 10 seconds: 3 people and 1 car. Up to 4 were in view at once. At 0:00, person 1 entered from the bottom and moved right slowly. At 0:00, car 4 and person 2 entered from the left and moved right. At 0:00, person 1 stopped for 3 seconds. At 0:01, person 3 entered from the right and moved left at a steady pace. At 0:03, person 1 and person 3 came close together for 1 second. Two other pairs also came close together. At 0:05, person 1 and person 2 came close together for 3 seconds. At 0:09, car 4 and person 2 left toward the right. 1 further event is shown on the timeline."
+          },
+          {
+            "case": "synthetic-crowd-0",
+            "accepted": true,
+            "reason": null,
+            "seconds": 9.1,
+            "chars": 648,
+            "text": "Nine people entered the scene over ten seconds, moving in various directions. Person 1 started from the left and moved right slowly, while person 2 moved left steadily. Two more individuals (3, 6) entered from the left and moved right, followed by person 4 entering from the right and moving left slowly. Person 5 then appeared in the scene and moved left at a steady pace. Two additional people (7, 8) entered from the left and moved right. People 6 and 8 got very close together for three seconds, and later, person 1 and person 8 came even closer for four seconds. The scene was filled with movement and interaction among these nine individuals.",
+            "template": "9 objects were tracked over 10 seconds: 9 people. Up to 9 were in view at once. At 0:00, person 1 entered from the left and moved right slowly. At 0:01, person 2 appeared in the scene and moved left at a steady pace. At 0:01, two people (3, 6) entered from the left and moved right. At 0:02, person 4 entered from the right and moved left slowly. At 0:02, person 5 appeared in the scene and moved left at a steady pace. At 0:02, two people (7, 8) entered from the left and moved right. At 0:03, person 6 and person 8 came close together for 3 seconds. At 0:05, person 1 and person 8 came close together for 4 seconds. 27 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crowd-1",
+            "accepted": true,
+            "reason": null,
+            "seconds": 7.3,
+            "chars": 576,
+            "text": "Ten people entered the scene from different directions within ten seconds, moving towards each other. Three groups of three people each came close together, including person 1 and person 4 who came close for seven seconds. Two more pairs also came close together. Then, two people entered from the right and moved left, followed by person 5 and person 8 coming close for five seconds. Person 9 then entered from the left and moved right at a steady pace, while person 10 appeared in the scene and moved left at a steady pace. Eight additional events are shown on the timeline.",
+            "template": "10 objects were tracked over 10 seconds: 10 people. Up to 9 were in view at once. At 0:00, three people (1, 3, 4) entered from the left and moved right. At 0:01, three people (2, 5, 6) entered from the right and moved left. At 0:01, person 1 and person 4 came close together for 7 seconds. 13 other pairs also came close together. At 0:02, two people (7, 8) entered from the right and moved left. At 0:03, person 5 and person 8 came close together for 5 seconds. At 0:03, person 9 entered from the left and moved right at a steady pace. At 0:07, person 10 appeared in the scene and moved left at a steady pace. 8 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-crowd-2",
+            "accepted": false,
+            "reason": "'from the right' disagrees with the entry edge",
+            "seconds": 8.4,
+            "chars": 592,
+            "text": "Nine people were observed moving through a scene over ten seconds. Person 1 started from the right side and moved steadily towards the left. Person 2 then appeared from the right and also moved right. Two more people (3 and 4) entered from the left and moved right. People 3 and 5 got very close together for four seconds, then separated. Person 5 then moved right slowly. Two more people (6 and 7) appeared in the scene and moved right. Person 5 and person 8 came close together for another four seconds. Finally, two people (5 and 6) stopped for two seconds before continuing their journey.",
+            "template": "9 objects were tracked over 10 seconds: 9 people. Up to 9 were in view at once. At 0:00, person 1 entered from the right and moved left at a steady pace. At 0:01, person 2 appeared in the scene and moved right at a steady pace. At 0:01, two people (3, 4) entered from the left and moved right. At 0:02, person 3 and person 5 came close together for 4 seconds. At 0:02, person 5 entered from the left and moved right slowly. At 0:03, two people (6, 7) appeared in the scene and moved right. At 0:04, person 5 and person 8 came close together for 4 seconds. At 0:06, two people (5, 6) stopped for 2 seconds. 21 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-street-0",
+            "accepted": true,
+            "reason": null,
+            "seconds": 10.1,
+            "chars": 712,
+            "text": "Over the course of ten seconds, seven distinct objects were observed moving around a scene. Initially, two individuals (2, 4) and a car (5) entered from the left side and proceeded to the right. Person 3 then appeared in the scene and moved slowly to the left. Person 3 paused for four seconds before continuing their journey. Shortly after, person 2 and person 4 got very close together for nine seconds, indicating they were likely engaged in some activity near each other. At 0:02, another car (6) and person 7 entered from the right side and moved towards the left. Car 1 and person 7 came into contact for just one second. Additionally, four more pairs of objects came close together during this time frame.",
+            "template": "7 objects were tracked over 10 seconds: 4 people and 3 cars. Up to 7 were in view at once. Car 1 stayed where it was throughout. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 3 stopped for 4 seconds. At 0:00, person 2 and person 4 came close together for 9 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, car 1 and person 7 came close together for 1 second. Seven other pairs also came close together. 4 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-street-1",
+            "accepted": false,
+            "reason": "car 7 is not a tracked object",
+            "seconds": 9.1,
+            "chars": 605,
+            "text": "Over the course of ten seconds, seven distinct objects were observed moving around a scene. Initially, two individuals (2 and 4) and a car (5) entered from the left side and proceeded to the right. Person 3 then appeared in the scene and moved slowly to the left. People 2 and 4 got very close together for nine seconds, while person 3 paused for four seconds. Cars 6 and 7 subsequently entered from the right and moved towards the left. Cars 1 and 7 came close together for just one second, and four additional pairs of objects also got close to each other. Four more events are depicted on the timeline.",
+            "template": "7 objects were tracked over 10 seconds: 4 people and 3 cars. Up to 7 were in view at once. Car 1 stayed where it was throughout. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 2 and person 4 came close together for 9 seconds. At 0:00, person 3 stopped for 4 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, car 1 and person 7 came close together for 1 second. Seven other pairs also came close together. 4 further events are shown on the timeline."
+          },
+          {
+            "case": "synthetic-street-2",
+            "accepted": true,
+            "reason": null,
+            "seconds": 8.5,
+            "chars": 730,
+            "text": "Over the course of ten seconds, seven distinct objects were observed moving across the scene. Initially, person 2 entered from the left and moved steadily to the right, while person 4 appeared and moved slowly towards the left. Person 4 paused for three seconds before continuing their journey. Simultaneously, car 5 and person 6 entered from the left and moved to the right, coming into close proximity with person 2 and person 6 for eight seconds. Then, car 7 and person 8 entered from the right and moved to the left, eventually coming into contact with car 1 and person 8 for one second. Throughout this period, there were eleven additional interactions between people and vehicles, showcasing the dynamic nature of the scene.",
+            "template": "7 objects were tracked over 10 seconds: 4 people and 3 cars. Up to 7 were in view at once. Car 1 stayed where it was throughout. At 0:00, person 2 entered from the left and moved right at a steady pace. At 0:01, person 4 appeared in the scene and moved left slowly. At 0:01, person 4 stopped for 3 seconds. At 0:01, car 5 and person 6 entered from the left and moved right. At 0:01, person 2 and person 6 came close together for 8 seconds. At 0:02, car 7 and person 8 entered from the right and moved left. At 0:03, car 1 and person 8 came close together for 1 second. 11 further events are shown on the timeline."
+          },
+          {
+            "case": "recorded-intersection",
+            "accepted": false,
+            "reason": "'the left' disagrees with the exit edge or direction of travel",
+            "seconds": 6.4,
+            "chars": 605,
+            "text": "Over eight seconds, a total of 15 objects were tracked, including 11 people and 4 cars. Four individuals (5, 8, 9, 12) and three vehicles (1, 2, 3) remained stationary throughout the entire period. At the start, person 5 and person 9 got very close together for eight seconds, while person 7 entered from the right and moved slowly to the left. Car 11 also made a brief appearance, entering from the right and moving left before stopping for two seconds. Person 8 and person 13 came close together for seven seconds, and person 14 and person 15 appeared later in the scene, staying in place until the end.",
+            "template": "15 objects were tracked over 8 seconds: 11 people and 4 cars. Up to 13 were in view at once. Four people (5, 8, 9, 12) and three cars (1, 2, 3) stayed where they were throughout. At 0:00, person 5 and person 9 came close together for 8 seconds. At 0:00, person 7 entered from the right and moved right slowly. At 0:00, car 11 entered from the right and moved left slowly. At 0:00, car 11 stopped for 2 seconds. At 0:00, person 8 and person 13 came close together for 7 seconds. At 0:01, person 14 appeared in the scene and stayed in place. At 0:03, person 15 appeared in the scene and stayed in place. 27 further events are shown on the timeline."
+          },
+          {
+            "case": "recorded-traffic",
+            "accepted": true,
+            "reason": null,
+            "seconds": 6.0,
+            "chars": 604,
+            "text": "Eight vehicles were observed moving across the scene within eight seconds, including four cars, two buses, and two trucks. Bus 1 started from the top and moved right at a steady pace, while bus 2 joined later and also moved right. Car 3 entered from the bottom and moved quickly to the right. Cars 5 and 6, along with truck 9, then appeared from the bottom and moved right. Truck 8 entered from the bottom and remained stationary. Cars 6 and truck 9 got very close together for two seconds, followed by truck 9 and car 11 coming closer for just one second. Seven more events are depicted on the timeline.",
+            "template": "8 objects were tracked over 8 seconds: 4 cars, 2 buses and 2 trucks. Up to 5 were in view at once. At 0:00, bus 1 entered from the top and moved right at a steady pace. At 0:02, bus 2 appeared in the scene and moved right at a steady pace. At 0:02, car 3 entered from the bottom and moved right fast. At 0:04, car 5 appeared in the scene and moved right at a steady pace. At 0:04, car 6 and truck 9 entered from the bottom and moved right. At 0:04, truck 8 entered from the bottom and stayed in place. At 0:04, car 6 and truck 9 came close together for 2 seconds. At 0:06, truck 9 and car 11 came close together for 1 second. 7 further events are shown on the timeline."
+          },
+          {
+            "case": "recorded-synthetic",
+            "accepted": true,
+            "reason": null,
+            "seconds": 6.0,
+            "chars": 611,
+            "text": "In the scene, four people and three cars were observed moving across the frame over eight seconds. Two people, person 2 and person 4, began by entering from the left and moving right. Person 3 then appeared in the scene and slowly moved left. Person 3 paused for three seconds before continuing. People 2 and 4 came close together for seven seconds, while car 6 and person 7 entered from the right and moved left. Person 2 and person 3 came close together for one second, and five other pairs also did so. Car 5 and person 2 eventually left toward the right. Four additional events are depicted on the timeline.",
+            "template": "7 objects were tracked over 8 seconds: 4 people and 3 cars. Up to 7 were in view at once. At 0:00, two people (2, 4) and car 5 entered from the left and moved right. At 0:00, person 3 appeared in the scene and moved left slowly. At 0:00, person 3 stopped for 3 seconds. At 0:01, person 2 and person 4 came close together for 7 seconds. At 0:02, car 6 and person 7 entered from the right and moved left. At 0:03, person 2 and person 3 came close together for 1 second. Five other pairs also came close together. At 0:07, car 5 and person 2 left toward the right. 4 further events are shown on the timeline."
+          }
+        ],
+        "cpu": {
+          "device": "cpu",
+          "dtype": "float32",
+          "cases": 3,
+          "mean_seconds": 45.6,
+          "load": {
+            "cpu_busy_percent": 94.9,
+            "gpu_busy_percent": 99,
+            "gpu_mem_used_mb": 8714,
+            "gpu_mem_total_mb": 16311
+          }
+        }
       }
     ]
+  },
+  "load_observed": {
+    "describer": {
+      "before": {
+        "cpu_busy_percent": 100.0,
+        "gpu_busy_percent": 26,
+        "gpu_mem_used_mb": 7040,
+        "gpu_mem_total_mb": 16311
+      },
+      "after": {
+        "cpu_busy_percent": 88.3,
+        "gpu_busy_percent": 55,
+        "gpu_mem_used_mb": 9104,
+        "gpu_mem_total_mb": 16311
+      }
+    }
   }
 }
