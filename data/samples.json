@@ -1,0 +1,52 @@
+{
+  "intersection": {
+    "label": "Street corner, fixed camera",
+    "blurb": "Cars and small, distant pedestrians at a tram junction.",
+    "file": "intersection.webm",
+    "sprite": "intersection_sprite.jpg",
+    "sprite_info": {
+      "fps": 5.0,
+      "cols": 8,
+      "thumb_w": 224,
+      "thumb_h": 126,
+      "count": 40
+    },
+    "width": 480,
+    "height": 270,
+    "fps": 10.0,
+    "frames": 80,
+    "source": {
+      "title": "Straßenverkehr in Düsseldorf.ogv",
+      "page": "https://commons.wikimedia.org/wiki/File:Stra%C3%9Fenverkehr_in_D%C3%BCsseldorf.ogv",
+      "author": "Slick",
+      "license": "CC0",
+      "trimmed_from": "3.0s",
+      "seconds": 8.0
+    }
+  },
+  "traffic": {
+    "label": "Village road, no people",
+    "blurb": "A car, a bus and a van pass a fixed camera; there are no people in the shot.",
+    "file": "traffic.webm",
+    "sprite": "traffic_sprite.jpg",
+    "sprite_info": {
+      "fps": 5.0,
+      "cols": 8,
+      "thumb_w": 224,
+      "thumb_h": 126,
+      "count": 40
+    },
+    "width": 480,
+    "height": 270,
+    "fps": 10.0,
+    "frames": 80,
+    "source": {
+      "title": "Gau-Bischofsheim - Steigstraße, Ampelschaltung auf Rot.webm",
+      "page": "https://commons.wikimedia.org/wiki/File:Gau-Bischofsheim_-_Steigstra%C3%9Fe,_Ampelschaltung_auf_Rot.webm",
+      "author": "ManuelB701",
+      "license": "CC0",
+      "trimmed_from": "2.0s",
+      "seconds": 8.0
+    }
+  }
+}
