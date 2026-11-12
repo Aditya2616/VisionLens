@@ -26,7 +26,7 @@ end and the static demo.
 | `detect/` | `Detector` protocol; HF adapter (D-FINE, RT-DETR); oracle/noisy detector for evaluation |
 | `track/` | box Kalman filter, IoU, two-stage association, lifecycle |
 | `events.py` | track history to typed events, thresholds in a config dataclass |
-| `describe/` | `Describer` interface; template; local causal LM; OpenAI/Anthropic adapters; optional VLM captioner |
+| `describe/` | `Describer` interface; template; local causal LM with faithfulness guard; OpenAI/Anthropic adapters |
 | `pipeline.py` | orchestration as a generator (progress and partial results for streaming) |
 | `synth.py` | deterministic synthetic scenes with exact ground truth |
 | `metrics.py` | MOTA, IDF1, ID switches, fragmentation, HOTA/DetA/AssA |
@@ -40,13 +40,13 @@ end and the static demo.
   crossing paths, class gating, second pass beating single pass on noisy input.
 - Events are deterministic and are the source of truth; the LLM only rephrases, with a faithfulness guard and fallback.
 - Browser draws overlays; the server returns original video (CFR WebM) plus Result JSON. Same for static demo.
-- Models fetched by `visionlens fetch-models` (default under 1 GB: D-FINE nano + one small LLM; captioner optional).
+- Models fetched by `visionlens fetch-models` (default under 1 GB: D-FINE nano + one small LLM; no captioner).
   Nothing committed.
 
 ## 4. API (FastAPI, port 8106)
 
 - `GET /health`: status, loaded models, versions.
-- `GET /api/samples`; `POST /api/analyze` (video or image upload; options stride, detector, describer, caption) returns
+- `GET /api/samples`; `POST /api/analyze` (video or image upload; options stride, detector, describer) returns
   `job_id`; `GET /api/jobs/{id}/stream` is SSE (`progress`, `frames`, `events`, `token`, `done`);
   `GET /api/jobs/{id}/result`.
 - `POST /api/frame`: single-frame detect+track for webcam live mode (browser `getUserMedia`, JPEG at ~3-5 FPS,
@@ -59,7 +59,7 @@ Vanilla ES modules + GSAP (CDN), portfolio tokens (void #07080a, lime #d7ff3f, o
 Instrument Serif italic, JetBrains Mono). Sources in `web/`; the same files are served from `docs/`.
 
 Desktop: video stage with canvas overlay on the left; "describe" panel (streaming text, tabs Template / Model /
-Caption) and counters on the right; an **event timeline** below (a lane per track id, glyphs for enter/leave/linger/
+Model) and counters on the right; an **event timeline** below (a lane per track id, glyphs for enter/leave/linger/
 proximity, playhead synced to video, click to seek). Phone: stacked, 44 px controls, timeline scrolls inside its own
 box, nothing hover-dependent.
 
@@ -80,7 +80,7 @@ Motion, all from real data:
 Fast and offline by default: Kalman, IoU/assignment, tracker lifecycle and ID stability, events from hand-built tracks,
 template snapshots, metrics against hand-computed cases, synth determinism, schemas, VP9 write/read round trip, API
 with a fake detector (health, analyze, SSE, limits, bad file), hosted adapters with stubbed HTTP, LLM faithfulness guard
-with a stub model. `slow` marker: real D-FINE inference, real LLM generation, captioner. CI: ruff + fast tests.
+with a stub model. `slow` marker: real D-FINE inference, real LLM generation. CI: ruff + fast tests.
 `scripts/ui_check.py` (own headless Chromium) captures 1440x900 and 390x844 touch screenshots and console errors; the
 webcam path is tested with Chromium's fake-device flags.
 
@@ -95,7 +95,7 @@ webcam path is tested with Chromium's fake-device flags.
 
 ## 8. Done means
 
-Everything in `_BRIEF.md`, plus: tracker beats the naive baseline on the synthetic set with the margin shown; real clip
+The tests and lint pass, the UI is checked at desktop and phone size, and: tracker beats the naive baseline on the synthetic set with the margin shown; real clip
 shows stable IDs by visual check; description works with the template alone, with the local LLM, and fails safe;
 static demo plays with scanner reveal, toggles and timeline over a plain static server; uploaded video and image work in
 live mode; webcam works under fake-device Chromium; 390 px layout verified; repo size reported.

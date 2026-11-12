@@ -1,8 +1,8 @@
 # VisionLens: research notes
 
-Phase 1 findings. Items marked **[measured]** were run on this machine (Ryzen 5 8500G, 12 threads, CPU-only PyTorch 2.11,
-transformers 5.7, opencv-python 5.0.0) while eight other builds shared the CPU, so absolute timings are pessimistic
-and noisy. The build phase re-measures with a reproducible script and records the machine load. Items marked
+Notes I made before building. Items marked **[measured]** were quick runs on my machine (Ryzen 5 8500G, 12 threads,
+CPU-only PyTorch 2.11, transformers 5.7, opencv-python 5.0.0) while the CPU was busy with other jobs, so absolute
+timings are pessimistic and noisy. The numbers in the README come from `visionlens bench`, not from this file. Items marked
 **[claimed]** come from papers or model cards and are verified before they reach the README.
 
 ## 1. Detector (stage 1)
@@ -96,12 +96,13 @@ back to the template and flag it in the UI.
 **Optional scene captioner:** SmolVLM-256M-Instruct (Apache-2.0, 513 MB) or Florence-2-base (MIT, 463 MB in the
 `florence-community` native conversion). Moondream2 is Apache-2.0 on the hub (one source suggested BSL; check card) but
 ~2B params / 3.9 GB: over budget. The caption adds scene context the events cannot ("a pedestrian street with shops").
-Both get benchmarked in the build; one is kept behind `--caption`, or the feature is cut and documented.
+**Cut:** I did not build the captioner. Detection, tracking and events already give the description its facts, and a
+third model on a shared CPU was not worth the latency.
 
 Hosted adapters (OpenAI, optionally Anthropic) sit behind the same `Describer` interface, selected by env var, tested
 only against a stubbed HTTP transport.
 
-## 5. Video I/O on this machine [measured]
+## 5. Video I/O here [measured]
 
 opencv-python 5.0.0 (PyPI wheel with bundled FFmpeg), via write-then-read-back tests:
 - `VP90` into `.webm`: works (20/20 frames read back). Chromium plays VP9 WebM. **Chosen for video output.**
@@ -125,7 +126,7 @@ Wikimedia Commons files marked CC0 (checked through the Commons API licence fiel
 - Further candidates, to verify in the build: "DiagonalCrosswalkYongeDundas" (CC0, 56 s, busy crosswalk, 73 MB
   source, so fetched and trimmed by script), "Airport moving walkway" (CC0, 20 s).
 - Generated clips from my scene generator, with ground truth, committed (small).
-- Attribution kept in `data/SAMPLES.md` even though CC0 does not require it. Wikimedia throttles bare downloads
+- Attribution is kept in `data/samples.json` and the README even though CC0 does not require it. Wikimedia throttles bare downloads
   (HTTP 429): the fetch script sends a descriptive User-Agent and retries.
 
 ## 7. Prior art (behaviour only, nothing copied)
@@ -141,4 +142,4 @@ Roboflow `supervision`/`trackers` (MIT), `ifzhang/ByteTrack`, `noahcao/OC_SORT`,
 - SmolVLM https://arxiv.org/abs/2504.05299 , Florence-2 https://arxiv.org/abs/2311.06242
 - https://huggingface.co/docs/transformers/model_doc/rt_detr_v2 , https://huggingface.co/ustc-community/dfine-nano-coco
 - Licences read from the Hugging Face hub API for every model listed (Apache-2.0, except Florence-2, MIT).
-- The arXiv ids and the [claimed] AP figures are from memory/model cards and are re-checked before use in the README.
+- The arXiv ids and the [claimed] AP figures come from the papers and model cards; the README quotes them only as claims.
