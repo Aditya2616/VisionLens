@@ -1,0 +1,26 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # The fast tests never import torch or transformers (they are loaded lazily), so CI
+      # installs only the light dependencies. Model tests are marked "slow" and not run here.
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy scipy opencv-python-headless pillow pydantic fastapi uvicorn \
+            python-multipart httpx pytest ruff
+          pip install -e . --no-deps
+      - name: Lint
+        run: ruff check .
+      - name: Format check
+        run: ruff format --check .
+      - name: Fast tests
+        run: pytest -q

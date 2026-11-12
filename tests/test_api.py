@@ -50,7 +50,9 @@ def docs(tmp_path, scene_video):
             }
         )
     )
-    (tmp_path / "docs" / "index.html").write_text("<html>ui</html>")
+    (tmp_path / "docs" / "index.html").write_text(
+        '<html><meta name="vl-server" content="0">ui</html>'
+    )
     return tmp_path / "docs"
 
 
@@ -75,7 +77,8 @@ def wait_done(client, job_id, timeout=60):
 def test_health_and_static_ui(client):
     h = client.get("/health").json()
     assert h["status"] == "ok" and h["live"] is True and h["limits"]["max_upload_mb"] == 1
-    assert client.get("/").text == "<html>ui</html>"
+    # the served page tells the front end that a local server is present
+    assert 'name="vl-server" content="1"' in client.get("/").text
 
 
 def test_samples_list(client):

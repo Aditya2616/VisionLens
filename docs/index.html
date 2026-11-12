@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="vl-server" content="0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080a">
+<title>VisionLens: detect, track, describe</title>
+<meta name="description" content="A multimodal pipeline that sees, labels and describes a scene: a detector finds objects, a tracker keeps their identities, and a describer turns the track history into plain language.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307080a'/%3E%3Cpath d='M7 12V7h5M20 7h5v5M25 20v5h-5M12 25H7v-5' stroke='%23d7ff3f' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%23d7ff3f'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip" href="#stage">Skip to the video</a>
+
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span><span class="mono">VISIONLENS</span></div>
+  <div class="mode mono" id="mode" role="status" aria-live="polite"><i></i><span>Checking for a local server…</span></div>
+</header>
+
+<main>
+  <section class="intro">
+    <p class="eyebrow mono">Computer vision · multimodal</p>
+    <h1>Detect. Track. <em>Describe.</em></h1>
+    <p class="lede">A detector finds objects frame by frame, a tracker keeps their identities stable, and the track history becomes a plain-language description. Everything below is drawn from the pipeline's real output.</p>
+  </section>
+
+  <nav class="clips" id="clips" aria-label="Sample clips"></nav>
+
+  <div class="layout">
+    <section class="stage-col" aria-label="Video analysis">
+      <div class="strip" id="strip" aria-label="Pipeline stages">
+        <div class="cell" data-s="detect"><span class="k mono">01 DETECT</span><b class="v" id="s-detect">–</b><span class="sub mono" id="s-detect-sub"></span></div>
+        <div class="arrow" aria-hidden="true"></div>
+        <div class="cell" data-s="track"><span class="k mono">02 TRACK</span><b class="v" id="s-track">–</b><span class="sub mono" id="s-track-sub"></span></div>
+        <div class="arrow" aria-hidden="true"></div>
+        <div class="cell" data-s="describe"><span class="k mono">03 DESCRIBE</span><b class="v" id="s-desc">–</b><span class="sub mono" id="s-desc-sub"></span></div>
+      </div>
+
+      <div class="stage" id="stage" tabindex="-1">
+        <div class="media" id="media"></div>
+        <canvas class="overlay" id="overlay" aria-hidden="true"></canvas>
+        <button class="bigplay" id="bigplay" type="button" aria-label="Play">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
+          <span class="mono">Tap to scan</span>
+        </button>
+        <div class="busy" id="busy" hidden>
+          <div class="busy-in">
+            <span class="mono" id="busy-label">Analysing…</span>
+            <div class="bar"><i id="busy-bar"></i></div>
+            <span class="mono dim" id="busy-sub"></span>
+          </div>
+        </div>
+        <div class="note mono" id="note" hidden></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn icon" id="play" type="button" aria-label="Play" disabled>
+          <svg class="i-play" viewBox="0 0 24 24" width="18" height="18"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
+          <svg class="i-pause" viewBox="0 0 24 24" width="18" height="18"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg>
+        </button>
+        <div class="scrub" id="scrub" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+          <div class="rail"><i id="scrub-fill"></i></div><b class="thumb" id="scrub-thumb"></b>
+        </div>
+        <span class="time mono" id="time">0:00 / 0:00</span>
+      </div>
+
+      <div class="chips" id="layers" role="group" aria-label="Pipeline layers">
+        <button type="button" class="chip" data-layer="dets" aria-pressed="false"><i class="sw dash"></i>Raw detections</button>
+        <button type="button" class="chip" data-layer="tracks" aria-pressed="true"><i class="sw"></i>Tracks</button>
+        <button type="button" class="chip" data-layer="trails" aria-pressed="true"><i class="sw line"></i>Trails</button>
+        <button type="button" class="chip" data-layer="events" aria-pressed="true"><i class="sw ring"></i>Events</button>
+        <button type="button" class="chip" data-layer="gt" aria-pressed="false" hidden><i class="sw box"></i>Ground truth</button>
+        <button type="button" class="chip ghost" id="rescan"><i class="sw scan"></i>Replay scan</button>
+      </div>
+
+      <div class="timeline-wrap">
+        <div class="tl-head mono"><span>TIMELINE</span><span class="dim" id="tl-hint">drag to scrub · tap a marker for the event</span></div>
+        <div class="timeline" id="timeline"><canvas id="tl-canvas"></canvas></div>
+        <div class="tl-tip mono" id="tl-tip" hidden></div>
+      </div>
+    </section>
+
+    <aside class="panel-col">
+      <section class="card describe" aria-labelledby="d-title">
+        <div class="card-head">
+          <h2 id="d-title" class="mono">DESCRIPTION</h2>
+          <div class="tabs" role="tablist" id="d-tabs">
+            <button role="tab" class="tab" data-tab="template" aria-selected="true">Template</button>
+            <button role="tab" class="tab" data-tab="model" aria-selected="false">Model</button>
+          </div>
+        </div>
+        <p class="tag mono" id="d-tag"></p>
+        <div class="text" id="d-text" aria-live="polite"></div>
+        <p class="guard mono" id="d-guard" hidden></p>
+      </section>
+
+      <section class="card counters" aria-label="Counts">
+        <div class="big"><b id="c-now">0</b><span class="mono">in view</span></div>
+        <div class="big"><b id="c-total">0</b><span class="mono">tracked</span></div>
+        <div class="big"><b id="c-events">0</b><span class="mono">events</span></div>
+        <div class="classes mono" id="c-classes"></div>
+      </section>
+
+      <section class="card live" id="live" aria-labelledby="l-title">
+        <h2 id="l-title" class="mono">YOUR OWN VIDEO</h2>
+        <div id="live-demo" hidden>
+          <p>Upload and webcam need the local server, so they are not part of this static page. To try them:</p>
+          <pre class="code mono"><code>pip install -e .
+visionlens fetch-models
+visionlens serve</code></pre>
+          <p class="dim small">Then open <span class="mono">http://127.0.0.1:8106</span>. Everything stays on your machine.</p>
+        </div>
+        <div id="live-on" hidden>
+          <div class="row">
+            <label class="btn wide" for="file">Upload video or image<input id="file" type="file" accept="video/*,image/*,.webm,.mp4,.mov,.mkv,.avi,.ogv,.jpg,.jpeg,.png,.webp" hidden></label>
+            <button class="btn wide" id="cam" type="button">Use webcam</button>
+          </div>
+          <div class="row opts">
+            <label class="sel mono">Describer
+              <select id="opt-desc"><option value="template">template (fast)</option><option value="llm">template + local model</option></select>
+            </label>
+            <label class="sel mono">Detector stride
+              <select id="opt-stride"><option>1</option><option>2</option><option selected>3</option><option>5</option></select>
+            </label>
+          </div>
+          <button class="btn wide ghost" id="run-sample" type="button">Run the selected clip live</button>
+          <p class="dim small" id="live-limits"></p>
+          <p class="dim small">Uploads are processed in a temp folder and deleted afterwards. The webcam starts only when you tap the button.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="how">
+    <h2 class="mono">HOW IT WORKS</h2>
+    <ol>
+      <li><b>Detect.</b> D-FINE (a real-time DETR-family detector, Apache-2.0) runs on the CPU every few frames and returns boxes, classes and scores.</li>
+      <li><b>Track.</b> My own ByteTrack-style tracker predicts every box with a Kalman filter, matches by IoU with the Hungarian algorithm, and rescues low-score boxes in a second pass. That is why the solid boxes stay put while the dashed raw boxes flicker.</li>
+      <li><b>Describe.</b> The track history becomes typed events (enter, leave, move, linger, proximity). A deterministic template turns them into sentences; an optional small local language model may rewrite them, and a guard rejects any rewrite that invents a track, number or object.</li>
+    </ol>
+  </section>
+</main>
+
+<footer>
+  <span>Built by <a href="https://adityajain16.vercel.app" rel="noopener">Aditya Jain</a></span>
+  <a href="https://github.com/Aditya2616/VisionLens" rel="noopener">github.com/Aditya2616/VisionLens</a>
+  <a href="#credits" id="credits-link" class="mono">Sample credits</a>
+</footer>
+<dialog id="credits"><form method="dialog"><h3 class="mono">SAMPLE CREDITS</h3><div id="credits-body"></div><button class="btn wide">Close</button></form></dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

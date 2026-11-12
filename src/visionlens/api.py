@@ -21,7 +21,7 @@ from typing import Any
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -390,5 +390,16 @@ def create_app(detector: Detector | None = None, settings: Settings | None = Non
 
     docs = Path(cfg.docs_dir)
     if docs.exists():
+        index_html = docs / "index.html"
+
+        @app.get("/", include_in_schema=False)
+        def home() -> HTMLResponse:
+            # The page only probes for a server when this flag says one is serving it, so the
+            # static copy on GitHub Pages never makes a request that would 404.
+            text = index_html.read_text("utf-8").replace(
+                'name="vl-server" content="0"', 'name="vl-server" content="1"'
+            )
+            return HTMLResponse(text, headers={"Cache-Control": "no-cache"})
+
         app.mount("/", StaticFiles(directory=docs, html=True), name="ui")
     return app
