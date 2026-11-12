@@ -11,16 +11,25 @@ DEMO_DIR = ROOT / "docs" / "demo"
 
 
 def _common(p: argparse.ArgumentParser) -> None:
+    from .describe import DEFAULT_DESCRIBER
+
     p.add_argument("--detector", default="dfine-nano", help="dfine-nano | dfine-small | rtdetr-r18")
     p.add_argument("--input-size", type=int, default=640)
     p.add_argument("--stride", type=int, default=3, help="run the detector every N frames")
     p.add_argument(
-        "--describer", default="template", help="template (default) | llm | openai | anthropic"
+        "--describer",
+        default=DEFAULT_DESCRIBER,
+        help="template (default) | llm | openai | anthropic",
     )
     p.add_argument(
         "--threads", type=int, default=None, help="torch/OpenCV threads (default: 1/4 of cores)"
     )
     p.add_argument("--device", default=None, help="auto (default) | cpu | cuda")
+    p.add_argument(
+        "--caption",
+        action="store_true",
+        help="also caption the scene with the vision-language model (opt-in)",
+    )
     p.add_argument("--max-seconds", type=float, default=None)
     p.add_argument("--fps", type=float, default=15.0, help="analysis frame rate cap")
 
@@ -53,6 +62,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     from .runner import analyze_file
 
     det, cfg, desc = _make_pipeline(args)
+    captioner = None
+    if args.caption:
+        from .caption import SceneCaptioner
+
+        captioner = SceneCaptioner()
 
     def progress(fr, total):
         if fr.i % 15 == 0:
@@ -68,6 +82,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         target_fps=args.fps,
         on_frame=progress,
         threads=args.threads,
+        captioner=captioner,
     )
     print(file=sys.stderr)
     out = Path(args.out) if args.out else default_output(args.input, ".visionlens.json")
@@ -75,6 +90,13 @@ def cmd_run(args: argparse.Namespace) -> int:
     out.write_text(res.model_dump_json(), "utf-8")
     d = res.description
     print(d.template.text if d else "")
+    if res.scene:
+        flag = (
+            f" [flagged: names {', '.join(res.scene.unseen)} the detector never saw]"
+            if res.scene.flagged
+            else ""
+        )
+        print(f"\nScene (vision-language model): {res.scene.text}{flag}")
     if d and d.model:
         verdict = "accepted" if d.model.accepted else f"rejected ({d.model.rejected_reason})"
         print(f"\n[{d.model.source} rewrite {verdict}]\n{d.model.text}")
@@ -131,17 +153,11 @@ def cmd_serve(args: argparse.Namespace) -> int:
 def cmd_fetch_models(args: argparse.Namespace) -> int:
     from huggingface_hub import snapshot_download
 
-    from .describe.llm import DEFAULT_LLM
-    from .detect.hf import MODELS
+    from .models import fetch_plan
 
-    wanted = [MODELS["dfine-nano"]]
-    if args.all:
-        wanted += [MODELS["dfine-small"], MODELS["rtdetr-r18"]]
-    if args.llm or args.all:
-        wanted.append(DEFAULT_LLM)
-    for repo in wanted:
+    for repo, ignore in fetch_plan(args.all, args.llm, args.caption):
         print("downloading", repo)
-        snapshot_download(repo)
+        snapshot_download(repo, ignore_patterns=ignore or None)
     print("done")
     return 0
 
@@ -171,6 +187,7 @@ def cmd_record_demo(args: argparse.Namespace) -> int:
         args.describer,
         names=args.names or None,
         machine_note=args.note,
+        caption=args.caption,
     )
     return 0
 
@@ -204,7 +221,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="device for the GPU rows, the pipeline GPU row and the describer (auto | cuda | cpu)",
     )
     p.add_argument(
-        "--skip", nargs="*", default=[], choices=["detectors", "tracker", "pipeline", "describer"]
+        "--skip",
+        nargs="*",
+        default=[],
+        choices=["detectors", "tracker", "pipeline", "describer", "captioner"],
     )
     p.set_defaults(fn=cmd_bench)
 
@@ -217,7 +237,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("fetch-models", help="download the models (one time)")
     p.add_argument("--llm", action="store_true", help="also the local describer model")
-    p.add_argument("--all", action="store_true", help="every detector plus the LLM")
+    p.add_argument(
+        "--caption", action="store_true", help="also the vision-language scene captioner"
+    )
+    p.add_argument(
+        "--all", action="store_true", help="every detector, both language models and the captioner"
+    )
     p.set_defaults(fn=cmd_fetch_models)
 
     p = sub.add_parser("make-synthetic", help="render a synthetic scene to WebM")

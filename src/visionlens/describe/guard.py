@@ -279,16 +279,24 @@ def check_sentence(s: str, ix: _Index) -> str | None:
     return None
 
 
-def check_faithful(
+def check_detail(
     text: str, events: list[Event], summary: dict, facts_text: str, duration: float
-) -> tuple[bool, str | None]:
+) -> tuple[bool, str | None, str | None]:
+    """(accepted, reason, the offending sentence)."""
     if len(text.strip()) < 20:
-        return False, "text too short"
+        return False, "text too short", text.strip()
     ix = _build_index(events, summary, facts_text, duration)
     for s in re.split(r"(?<=[.!?])\s+", text.strip()):
         if not s:
             continue
         why = check_sentence(s, ix)
         if why:
-            return False, why
-    return True, None
+            return False, why, s
+    return True, None, None
+
+
+def check_faithful(
+    text: str, events: list[Event], summary: dict, facts_text: str, duration: float
+) -> tuple[bool, str | None]:
+    ok, why, _ = check_detail(text, events, summary, facts_text, duration)
+    return ok, why

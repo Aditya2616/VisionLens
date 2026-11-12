@@ -97,6 +97,12 @@
         <p class="tag mono" id="d-tag"></p>
         <div class="text" id="d-text" aria-live="polite"></div>
         <p class="guard mono" id="d-guard" hidden></p>
+        <div class="scene" id="d-scene" hidden>
+          <h3 class="mono">SCENE (VISION-LANGUAGE MODEL)</h3>
+          <p id="d-scene-text"></p>
+          <p class="mono scene-meta" id="d-scene-meta"></p>
+          <p class="mono scene-flag" id="d-scene-flag" hidden></p>
+        </div>
       </section>
 
       <section class="card counters" aria-label="Counts">
@@ -124,6 +130,9 @@ visionlens serve</code></pre>
             <label class="sel mono">Describer
               <select id="opt-desc"><option value="template">template (fast)</option><option value="llm">template + local model</option></select>
             </label>
+            <label class="sel mono">Scene caption
+              <select id="opt-caption"><option value="off">off</option><option value="on">vision-language model</option></select>
+            </label>
             <label class="sel mono">Detector stride
               <select id="opt-stride"><option>1</option><option>2</option><option selected>3</option><option>5</option></select>
             </label>
@@ -141,7 +150,7 @@ visionlens serve</code></pre>
     <ol>
       <li><b>Detect.</b> D-FINE (a real-time DETR-family detector, Apache-2.0) runs every few frames (on a CPU or a GPU) and returns boxes, classes and scores.</li>
       <li><b>Track.</b> My own ByteTrack-style tracker predicts every box with a Kalman filter, matches by IoU with the Hungarian algorithm, and rescues low-score boxes in a second pass. That is why the solid boxes stay put while the dashed raw boxes flicker.</li>
-      <li><b>Describe.</b> The track history becomes typed events (enter, leave, move, linger, proximity). A deterministic template groups them into a short summary; an optional small local language model may rewrite it, and a guard rejects any rewrite whose objects, counts, times, directions or verbs the events do not support.</li>
+      <li><b>Describe.</b> The track history becomes typed events (enter, leave, move, linger, proximity). A deterministic template groups them into a short summary; an optional small local language model may rewrite it, and a guard rejects any rewrite whose objects, counts, times, directions or verbs the events do not support and asks for another attempt (up to three). An optional small vision-language model adds a separate, labelled line about the scene, cross-checked against the objects the detector found.</li>
     </ol>
   </section>
 </main>

@@ -85,11 +85,12 @@ Faithfulness guard: after generation, check the text sentence by sentence agains
 directions, event verbs); otherwise fall back to the template and flag it in the UI. The rules are in
 `src/visionlens/describe/guard.py`.
 
-**Optional scene captioner:** SmolVLM-256M-Instruct (Apache-2.0, 513 MB) or Florence-2-base (MIT, 463 MB in the
-`florence-community` native conversion). Moondream2 is Apache-2.0 on the hub (one source suggested BSL; check card) but
-~2B params / 3.9 GB: over budget. The caption adds scene context the events cannot ("a pedestrian street with shops").
-**Cut:** I did not build the captioner. Detection, tracking and events already give the description its facts, and a
-third model on a shared CPU was not worth the latency.
+**Optional scene captioner:** SmolVLM-256M-Instruct (Apache-2.0, about 0.5 GB) or Florence-2-base (MIT, about
+0.5 GB). Moondream2 is about 2 billion parameters, several GB, so over budget. The caption adds scene context the
+events cannot ("a pedestrian street with shops").
+**Built later, opt-in:** I first cut the captioner for lack of memory and time, then reinstated it. SmolVLM-256M-Instruct
+(Apache-2.0, checked on its card) is the one used; Florence-2-base (MIT) was the alternative. Moondream2 stays out on
+size. How it is evaluated is in the README.
 
 Hosted adapters (OpenAI, optionally Anthropic) sit behind the same `Describer` interface, selected by env var, tested
 only against a stubbed HTTP transport.

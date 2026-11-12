@@ -7,6 +7,7 @@ export class DescriptionPanel {
     this.tag = $('#d-tag');
     this.guard = $('#d-guard');
     this.tabs = $$('#d-tabs .tab');
+    this.scene = $('#d-scene');
     this.onPickEvents = onPickEvents;
     this.tab = 'template';
     this.result = null;
@@ -20,8 +21,21 @@ export class DescriptionPanel {
     });
   }
 
+  // The vision-language caption of the setting: its own labelled block, never mixed into the
+  // event sentences. Objects it names that the detector never saw are flagged.
+  _scene(sc) {
+    this.scene.hidden = !sc;
+    if (!sc) return;
+    $('#d-scene-text').textContent = sc.text;
+    $('#d-scene-meta').textContent = `${sc.model.split('/').pop()} · ${sc.device === 'cuda' ? 'GPU' : 'CPU'} ${sc.dtype} · ${sc.frames.length} key frames in ${sc.seconds} s`;
+    const flag = $('#d-scene-flag');
+    flag.hidden = !sc.flagged;
+    if (sc.flagged) flag.textContent = `Check: the caption names ${sc.unseen.join(', ')}, which the detector never saw in this clip.`;
+  }
+
   clear(message = '') {
     this._job++;
+    this.scene.hidden = true;
     this.text.replaceChildren();
     this.guard.hidden = true;
     if (message) this.tag.textContent = message;
@@ -34,6 +48,7 @@ export class DescriptionPanel {
     this.tabs.forEach((b) => b.classList.toggle('used', !!d && ((b.dataset.tab === 'model') === (d.used === 'model'))));
     // The template is the default describer, so it is what opens; the model tab is one tap away.
     this.showTab('template', { stream });
+    this._scene(result.scene);
   }
 
   showTab(name, { stream = false } = {}) {
@@ -57,9 +72,11 @@ export class DescriptionPanel {
       this._type([{ text: m.text, event_ids: [] }], job, stream);
       this.guard.hidden = false;
       this.guard.classList.toggle('ok', m.accepted);
+      const tries = m.attempts || 1;
+      const earlier = (m.attempt_log || []).slice(0, m.accepted ? tries - 1 : tries);
       this.guard.textContent = m.accepted
-        ? 'Guard: accepted. Objects, counts, times, directions and event verbs were checked against the event list.'
-        : `Guard: rejected (${m.rejected_reason}). The template description is used instead.`;
+        ? `Guard: accepted${tries > 1 ? ` on attempt ${tries} (earlier attempts were rejected: ${earlier.join('; ')})` : ' on the first attempt'}. Objects, counts, times, directions and event verbs were checked against the event list.`
+        : `Guard: rejected after ${tries} ${tries === 1 ? 'attempt' : 'attempts'} (${m.rejected_reason}). The template description is used instead.`;
     }
   }
 

@@ -11,6 +11,7 @@ and the script refuses to write a number that it cannot find there.
 from __future__ import annotations
 
 import datetime as dt
+import fnmatch
 import json
 import re
 import sys
@@ -22,6 +23,7 @@ from huggingface_hub import HfApi, hf_hub_download
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from visionlens.caption import CAPTION_IGNORE, CAPTION_MODEL  # noqa: E402
 from visionlens.describe.llm import DEFAULT_LLM  # noqa: E402
 from visionlens.detect.hf import MODELS  # noqa: E402
 
@@ -41,6 +43,7 @@ PUBLISHED_AP = {
     ),
 }
 LLMS = {"qwen-0.5b": "Qwen/Qwen2.5-0.5B-Instruct", "qwen-1.5b": "Qwen/Qwen2.5-1.5B-Instruct"}
+CAPTIONERS = {"smolvlm-256m": CAPTION_MODEL}
 
 
 def fetch(url: str) -> str:
@@ -57,14 +60,22 @@ def main() -> None:
             hf_hub_download("PekingU/rtdetr_r18vd", "README.md"), encoding="utf-8"
         ).read(),
     }
-    repos = {**{k: v for k, v in MODELS.items()}, **LLMS}
+    repos = {**MODELS, **LLMS, **CAPTIONERS}
     for key, repo in repos.items():
         info = api.model_info(repo, files_metadata=True)
         rec = {
             "repo": repo,
             "licence": (info.card_data.get("license") if info.card_data else None) or "unknown",
             "params": info.safetensors.total if info.safetensors else None,
-            "download_bytes": sum(s.size or 0 for s in info.siblings),
+            # what `visionlens fetch-models` downloads: every file except the ignored patterns
+            "download_bytes": sum(
+                s.size or 0
+                for s in info.siblings
+                if not (
+                    repo == CAPTION_MODEL
+                    and any(fnmatch.fnmatch(s.rfilename, p) for p in CAPTION_IGNORE)
+                )
+            ),
             "revision": info.sha,
         }
         if key in PUBLISHED_AP:
@@ -74,6 +85,7 @@ def main() -> None:
             rec.update(published_ap=ap, ap_source=src)
         out["models"][key] = rec
     out["default_llm"] = DEFAULT_LLM
+    out["caption_model"] = CAPTION_MODEL
     path = ROOT / "data" / "facts.json"
     path.write_text(json.dumps(out, indent=2) + "\n", "utf-8")
     print("wrote", path)

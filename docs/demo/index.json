@@ -4,9 +4,11 @@
   "threads": 2,
   "device": "cuda (NVIDIA GeForce RTX 5060 Ti)",
   "llm_dtype": "float16",
+  "caption_model": "HuggingFaceTB/SmolVLM-256M-Instruct",
+  "caption_dtype": "float16",
   "detector": "dfine-nano",
   "stride": 2,
-  "note": "detector and language model ran on the GPU (float16 for the model); the CPU and GPU were shared with other jobs",
+  "note": "detector, language model and scene captioner ran on the GPU (float16); the CPU and GPU were shared with other jobs",
   "clips": [
     {
       "id": "intersection",

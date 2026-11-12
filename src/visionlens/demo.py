@@ -45,6 +45,7 @@ def record_demo(
     describer: str,
     names: list[str] | None = None,
     machine_note: str = "",
+    caption: bool = False,
 ) -> None:
     n_threads = limit_threads(threads)
     manifest_path = out_dir.parent.parent / "data" / "samples.json"
@@ -52,6 +53,11 @@ def record_demo(
     clips: list[dict] = []
     det = load_detector(detector, 640)
     llm = make_describer(describer)
+    cap = None
+    if caption:
+        from .caption import SceneCaptioner
+
+        cap = SceneCaptioner()
     want = set(names) if names else None
 
     for name, info in samples.items():
@@ -66,6 +72,7 @@ def record_demo(
             threads=n_threads,
             machine_note=machine_note,
             name=name,
+            captioner=cap,
         )
         res.meta.recorded = True
         _write_json(out_dir / f"{name}.json", res)
@@ -94,7 +101,10 @@ def record_demo(
         sprite = write_sprite(
             frames, out_dir / "synthetic_sprite.jpg", fps=5.0, thumb_w=320, quality=60
         )
-        pipe = Pipeline(NoisyOracle(scene, NoiseConfig.level(1, 1)), PipelineConfig(stride=stride))
+        pipe = Pipeline(
+            NoisyOracle(scene, NoiseConfig.level(1, 1)),
+            PipelineConfig(stride=stride, keep_keyframes=caption),
+        )
         for _ in pipe.process((i, i / scene.fps, f) for i, (_, f) in enumerate(frames)):
             pass
         res = pipe.finish(
@@ -106,6 +116,7 @@ def record_demo(
             None,
             threads=n_threads,
             machine_note=machine_note,
+            captioner=cap,
         )
         res.meta.recorded = True
         res.meta.detector = "simulated detector (ground truth plus noise)"
@@ -149,7 +160,7 @@ def record_demo(
         ):
             cv2.imwrite(str(out_dir / "still.jpg"), frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
             break
-        res = analyze_image(det, cv2.imread(str(out_dir / "still.jpg")), "still")
+        res = analyze_image(det, cv2.imread(str(out_dir / "still.jpg")), "still", cap)
         res.meta.recorded = True
         _write_json(out_dir / "still.json", res)
         clips.append(
@@ -182,6 +193,8 @@ def record_demo(
                 "threads": n_threads,
                 "device": f"{det.device}" + (f" ({gpu_name()})" if det.device == "cuda" else ""),
                 "llm_dtype": getattr(llm, "dtype", None) or old.get("llm_dtype"),
+                "caption_model": cap.model_id if cap else old.get("caption_model"),
+                "caption_dtype": cap.dtype if cap else old.get("caption_dtype"),
                 "detector": detector,
                 "stride": stride,
                 "note": machine_note,

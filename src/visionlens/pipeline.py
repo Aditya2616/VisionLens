@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -15,6 +16,9 @@ from .schemas import Description, FrameResult, Meta, Result, Timings, TrackOut
 from .sysutil import cpu_name
 from .track import ByteTracker, TrackerConfig
 
+if TYPE_CHECKING:
+    from .caption import SceneCaptioner
+
 STILL_CONFIDENCE = TrackerConfig().high_thr  # a still image reports confident detections only
 
 
@@ -23,6 +27,7 @@ class PipelineConfig:
     stride: int = 3  # run the detector every Nth frame; the tracker predicts in between
     tracker: TrackerConfig = field(default_factory=TrackerConfig)
     events: EventConfig = field(default_factory=EventConfig)
+    keep_keyframes: bool = False  # keep a frame every half second for the optional captioner
 
 
 class Pipeline:
@@ -37,11 +42,16 @@ class Pipeline:
         self._detect_ms: list[float] = []
         self._track_ms: list[float] = []
         self._t_start = time.perf_counter()
+        self._thumbs: list[tuple[int, float, np.ndarray]] = []
+        self._next_keep = 0.0
 
     def process(self, frames: Iterable[tuple[int, float, np.ndarray]]) -> Iterator[FrameResult]:
         """Run the first two stages frame by frame, yielding each FrameResult as it is ready."""
         self.reset()
         for i, t, frame in frames:
+            if self.cfg.keep_keyframes and frame is not None and t >= self._next_keep:
+                self._thumbs.append((i, t, frame.copy()))
+                self._next_keep = t + 0.5
             dets = None
             if i % self.cfg.stride == 0:
                 t0 = time.perf_counter()
@@ -81,6 +91,7 @@ class Pipeline:
         threads: int = 0,
         truncated: bool = False,
         machine_note: str = "",
+        captioner: SceneCaptioner | None = None,
     ) -> Result:
         """Stage 3 and packaging, after `process` has been exhausted."""
         wall = time.perf_counter() - self._t_start
@@ -96,12 +107,24 @@ class Pipeline:
         )
         template = TemplateDescriber().describe(facts, on_token)
         description: Description = build_description(facts, template, describer, on_model_token)
+        scene, scene_note = None, ""
+        if captioner is not None and self._thumbs:
+            from .caption import pick_keyframes
+
+            seen = {t.cls for f in self.frames for t in f.tracks} | {
+                d.cls for f in self.frames for d in (f.dets or [])
+            }
+            try:
+                scene = captioner.caption(pick_keyframes(self._thumbs), seen)
+            except Exception as exc:  # noqa: BLE001 - an optional stage must not break the run
+                scene_note = f"scene caption failed: {exc}"
         dm = np.array(self._detect_ms) if self._detect_ms else np.array([0.0])
         timings = Timings(
             detect_ms_mean=round(float(dm.mean()), 1),
             detect_ms_p95=round(float(np.percentile(dm, 95)), 1),
             track_ms_mean=round(float(np.mean(self._track_ms or [0.0])), 3),
             detect_calls=len(self._detect_ms),
+            caption_s=scene.seconds if scene else 0.0,
             wall_s=round(wall, 2),
             fps_end_to_end=round(n / wall, 2) if wall > 0 else 0.0,
             threads=threads,
@@ -121,18 +144,25 @@ class Pipeline:
             input_size=getattr(self.detector, "input_size", 0),
             tracker=self.cfg.tracker.as_dict(),
             truncated=truncated,
+            note=scene_note,
         )
         return Result(
             meta=meta,
             frames=self.frames,
             events=events,
             description=description,
+            scene=scene,
             timings=timings,
             summary=summary,
         )
 
 
-def analyze_image(detector: Detector, image: np.ndarray, name: str = "image") -> Result:
+def analyze_image(
+    detector: Detector,
+    image: np.ndarray,
+    name: str = "image",
+    captioner: SceneCaptioner | None = None,
+) -> Result:
     """Still image: detection plus a counts-and-positions description. No tracking."""
     detector.detect(image, 0)  # warm-up, so the reported time is a steady-state call
     t0 = time.perf_counter()
@@ -173,11 +203,18 @@ def analyze_image(detector: Detector, image: np.ndarray, name: str = "image") ->
             for k, d in enumerate(sure)
         ],
     )
+    scene = None
+    if captioner is not None:
+        try:
+            scene = captioner.caption([(0.0, image)], {d.cls for d in dets})
+        except Exception as exc:  # noqa: BLE001
+            meta.note = f"scene caption failed: {exc}"
     return Result(
         meta=meta,
         frames=[frame],
         events=[],
         description=Description(template=variant, used="template"),
+        scene=scene,
         timings=Timings(
             detect_ms_mean=round(ms, 1),
             detect_ms_p95=round(ms, 1),

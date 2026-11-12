@@ -180,3 +180,32 @@ def test_webcam_frames_keep_identity_across_calls(docs):
         assert c.post("/api/frame?session=otherses1", content=jpg.tobytes()).status_code == 429
         assert c.post("/api/frame?session=abcdefgh", content=b"junk").status_code == 415
         assert c.post("/api/frame?session=abcdefgh", content=b"").status_code == 422
+
+
+def test_caption_is_opt_in_and_comes_back_as_a_separate_scene_line(docs, small_scene):
+
+    from visionlens.caption import SceneCaptioner
+
+    class Fake(SceneCaptioner):
+        def __init__(self):
+            super().__init__(device="cpu")
+
+        def generate(self, frame_bgr: np.ndarray) -> str:
+            return "A street with a bus."
+
+    det = NoisyOracle(small_scene, NoiseConfig.level(0))
+    app = create_app(
+        det, Settings(docs_dir=str(docs), max_upload_mb=1, max_seconds=4.0), captioner=Fake()
+    )
+    with TestClient(app) as c:
+        plain = c.post("/api/analyze", data={"sample": "clip", "stride": "1"}).json()["job_id"]
+        assert wait_done(c, plain)["state"] == "done"
+        assert c.get(f"/api/jobs/{plain}/result").json()["scene"] is None
+        job = c.post(
+            "/api/analyze", data={"sample": "clip", "stride": "1", "caption": "true"}
+        ).json()["job_id"]
+        assert wait_done(c, job)["state"] == "done"
+        res = c.get(f"/api/jobs/{job}/result").json()
+        assert res["scene"]["text"] == "A street with a bus."
+        assert res["scene"]["unseen"] == ["bus"] and res["scene"]["flagged"] is True
+        assert "A street with a bus" not in res["description"]["template"]["text"]

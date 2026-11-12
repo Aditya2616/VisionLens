@@ -41,7 +41,15 @@
       "params": 1543714304,
       "download_bytes": 3098973447,
       "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+    },
+    "smolvlm-256m": {
+      "repo": "HuggingFaceTB/SmolVLM-256M-Instruct",
+      "licence": "apache-2.0",
+      "params": 256484928,
+      "download_bytes": 517886646,
+      "revision": "7e3e67edbbed1bf9888184d9df282b700a323964"
     }
   },
-  "default_llm": "Qwen/Qwen2.5-0.5B-Instruct"
+  "default_llm": "Qwen/Qwen2.5-1.5B-Instruct",
+  "caption_model": "HuggingFaceTB/SmolVLM-256M-Instruct"
 }

@@ -388,6 +388,7 @@ async function runLive(req, label) {
   state.busy = true;
   const describer = $('#opt-desc').value;
   const stride = Number($('#opt-stride').value);
+  const caption = $('#opt-caption').value === 'on';
   if (state.player) state.player.pause();
   el.bigplay.hidden = true;
   el.busy.hidden = false;
@@ -398,7 +399,7 @@ async function runLive(req, label) {
   $$('.strip .cell').forEach((c) => c.classList.remove('on'));
   $('.strip [data-s="detect"]').classList.add('on');
   try {
-    const out = await analyze({ ...req, describer, stride }, {
+    const out = await analyze({ ...req, describer, stride, caption }, {
       onStatus: (d) => { if (d.state === 'running') el.busyLabel.textContent = 'Detecting and tracking…'; },
       onProgress: (d) => {
         if (d.total) el.busyBar.style.width = `${Math.min(98, (d.i / d.total) * 100)}%`;

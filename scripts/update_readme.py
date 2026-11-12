@@ -83,12 +83,44 @@ def _category(why: str) -> str:
 
 
 def best_model(res: dict) -> dict:
-    """The rewrite model chosen by evidence: highest guard acceptance, ties broken by CPU time."""
+    """The rewrite model chosen by evidence: highest guard acceptance after retries, then fewest
+    attempts, then the lower CPU time."""
     models = res["describer"]["models"]
     return max(
         models,
-        key=lambda m: (m["acceptance_rate"], -(m.get("cpu") or {}).get("mean_seconds", 1e9)),
+        key=lambda m: (
+            m["acceptance_rate"],
+            -m["mean_attempts"],
+            -(m.get("cpu") or {}).get("mean_seconds", 1e9),
+        ),
     )
+
+
+ACCEPT_MIN = 0.9  # a rewrite model must pass the guard on at least this share of cases
+
+
+def decide_default(res: dict) -> dict:
+    """Which describer is the default, by the evidence in results.json.
+
+    The rewrite is the default (where a GPU is available) only if the best model is accepted by the
+    guard on at least 90% of the cases after retries AND its shown text reads at least as well as
+    the template on the objective measures: no more repeated openings and no more words. Otherwise
+    the template stays the default and the rewrite is an option.
+    """
+    d = res["describer"]
+    win = best_model(res)
+    tpl = d["template"]["readability"]
+    got = win["readability_shown"]
+    checks = {
+        "accepted": win["acceptance_rate"] >= ACCEPT_MIN,
+        "openings": got["repeated_openings"] <= tpl["repeated_openings"],
+        "words": got["words"] <= tpl["words"],
+    }
+    return {
+        "default": "auto" if all(checks.values()) else "template",
+        "model": win,
+        "checks": checks,
+    }
 
 
 def blocks(root: Path = ROOT) -> dict[str, str]:
@@ -148,6 +180,16 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
                 "n/a",
             ]
         )
+    cap = fm["smolvlm-256m"]
+    det_rows.append(
+        [
+            f"`{cap['repo']}`",
+            LICENCE_NAMES.get(cap["licence"], cap["licence"]),
+            f"{cap['params'] / 1e6:.0f}",
+            size_text(cap["download_bytes"]),
+            "n/a",
+        ]
+    )
     out["models"] = (
         table(
             ["Hub id", "Licence", "Parameters (M)", "Download", "Published COCO AP (val)"],
@@ -156,15 +198,22 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
         + f"\n\nLicence, parameters and download size are read from the Hugging Face hub on {facts['fetched_on']} "
         "(`scripts/fetch_facts.py`). The AP figures are quoted from the sources linked, not measured here."
     )
-    nano = fm["dfine-nano"]["download_bytes"]
-    llm = fm["qwen-0.5b"]["download_bytes"]
-    everything = sum(
-        fm[k]["download_bytes"] for k in ("dfine-nano", "dfine-small", "rtdetr-r18", "qwen-0.5b")
-    )
+    from visionlens.describe.llm import DEFAULT_LLM
+    from visionlens.models import fetch_plan
+
+    repo_key = {m["repo"]: k for k, m in fm.items()}
+
+    def plan_bytes(**kw) -> int:
+        return sum(fm[repo_key[r]]["download_bytes"] for r, _ in fetch_plan(**kw))
+
+    base = plan_bytes()
     out["downloads"] = (
-        f"`visionlens fetch-models` downloads the default detector ({size_text(nano)}). "
-        f"`--llm` also downloads the optional rewrite model, Qwen2.5-0.5B-Instruct ({size_text(llm)}), and "
-        f"`--all` fetches both comparison detectors as well ({size_text(everything)} in total)."
+        f"`visionlens fetch-models` downloads the default detector ({size_text(base)}). `--llm` adds the "
+        f"optional rewrite model, {DEFAULT_LLM.split('/')[-1]} ({size_text(plan_bytes(llm=True) - base)}), "
+        f"`--caption` adds the optional scene captioner, SmolVLM-256M-Instruct "
+        f"({size_text(plan_bytes(caption=True) - base)}; only the weights and tokenizer files, not the "
+        f"repository's ONNX exports), and `--all` fetches everything in the models table "
+        f"({size_text(plan_bytes(all_models=True))} in total)."
     )
 
     # ------------------------------------------------------------------ detector speed
@@ -294,52 +343,199 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
             rows.append(
                 [
                     mod["model"],
+                    f"{mod['accepted_first_try']} / {mod['cases']} ({mod['first_try_rate']:.0%})",
                     f"{mod['accepted']} / {mod['cases']} ({mod['acceptance_rate']:.0%})",
+                    mod["mean_attempts"],
                     f"{mod['mean_seconds']} s ({mod['device']}, {mod['dtype']})",
-                    f"{cpu['mean_seconds']} s ({cpu['device']}, {cpu['dtype']}, {cpu['cases']} cases, "
-                    f"CPU {load}% busy)"
+                    f"{cpu['mean_seconds']} s, {cpu['mean_attempts']} attempts ({cpu['device']}, "
+                    f"{cpu['dtype']}, {cpu['cases']} cases, CPU {load}% busy)"
                     if cpu
                     else "not run",
                 ]
             )
         out["describer"] = (
             f"{len(d['cases'])} cases: {n_syn} synthetic scenes (every scene type x 3 seeds, simulated "
-            f"detector) and the {n_rec} recorded clips, rewritten from the grouped template facts with "
-            "greedy decoding.\n\n"
+            f"detector) and the {n_rec} recorded clips. The facts go to the model as a compact structured "
+            "list; a rewrite the guard rejects is regenerated, up to "
+            f"{d['models'][0]['max_attempts']} attempts in all, with the guard's reason and the offending "
+            "sentence fed back. Greedy decoding.\n\n"
             + table(
                 [
                     "Model",
-                    "Guard accepted",
-                    "Mean time per rewrite, GPU",
-                    "Mean time per rewrite, CPU",
+                    "Accepted on the first try",
+                    "Accepted after retries",
+                    "Mean attempts",
+                    "Mean time per clip, GPU",
+                    "Mean time per clip, CPU",
                 ],
                 rows,
+            )
+        )
+        tpl = d["template"]["readability"]
+        rrows = [
+            [
+                "Template",
+                tpl["sentences"],
+                tpl["words"],
+                tpl["words_per_sentence"],
+                tpl["repeated_openings"],
+            ]
+        ]
+        for mod in d["models"]:
+            for label, key in (
+                ("text shown (accepted rewrite, else the template)", "readability_shown"),
+                ("accepted rewrites only", "readability_accepted_rewrites"),
+            ):
+                v = mod[key]
+                if v:
+                    rrows.append(
+                        [
+                            f"`{mod['model'].split('/')[-1]}`, {label}",
+                            v["sentences"],
+                            v["words"],
+                            v["words_per_sentence"],
+                            v["repeated_openings"],
+                        ]
+                    )
+        out["describer_readability"] = (
+            "Means over the same cases. Repeated openings counts neighbouring sentences that start "
+            "with the same word.\n\n"
+            + table(
+                ["Text", "Sentences", "Words", "Words per sentence", "Repeated openings"], rrows
             )
         )
         reasons: dict[str, int] = {}
         for mod in d["models"]:
             for r in mod["rows"]:
-                if not r["accepted"]:
-                    key = _category(r["reason"] or "")
+                for why in r["attempt_log"]:
+                    key = _category(why or "")
                     reasons[key] = reasons.get(key, 0) + 1
-        out["describer_reasons"] = ", ".join(
-            f"{n} x {k}" for k, n in sorted(reasons.items(), key=lambda kv: -kv[1])
+        out["describer_reasons"] = (
+            ", ".join(f"{n} x {k}" for k, n in sorted(reasons.items(), key=lambda kv: -kv[1]))
+            or "none"
         )
-        win = best_model(res)
-        lose = [x for x in d["models"] if x is not win]
-        other = lose[0] if lose else None
-        sentence = (
-            f"**Choice by evidence.** `{win['model']}` is the model for the rewrite: the guard accepted "
-            f"{win['accepted']} of {win['cases']} of its rewrites"
-        )
-        if other:
-            sentence += (
-                f" against {other['accepted']} of {other['cases']} for `{other['model']}`, and its mean CPU "
-                f"time was {win['cpu']['mean_seconds']} s against {other['cpu']['mean_seconds']} s"
-                if win.get("cpu") and other.get("cpu")
-                else f" against {other['accepted']} of {other['cases']} for `{other['model']}`"
+        # what the retries did, stated from the rows
+        parts = []
+        for mod in d["models"]:
+            name = mod["model"].split("/")[-1]
+            same = sum(
+                1
+                for r in mod["rows"]
+                if not r["accepted"] and len(set(r["attempt_log"])) == 1 and r["attempts"] > 1
             )
-        out["describer_choice"] = sentence + "."
+            parts.append(
+                f"for `{name}` retries moved acceptance from {mod['accepted_first_try']} of {mod['cases']} "
+                f"cases on the first try to {mod['accepted']} of {mod['cases']} "
+                f"(mean {mod['mean_attempts']} attempts); in {same} of its {mod['rejected']} final "
+                "rejections every attempt failed for the same reason"
+            )
+        out["retry_effect"] = "Effect of the retries: " + "; ".join(parts) + "."
+        dec = decide_default(res)
+        win = dec["model"]
+        got = win["readability_shown"]
+        verdict = (
+            "The rewrite passes all three tests, so it is the default describer where a GPU is available "
+            "(`--describer auto`) and the template is the default on a CPU-only machine."
+            if dec["default"] == "auto"
+            else "The rewrite does not pass all three tests, so the template stays the default describer "
+            "and the rewrite is an option."
+        )
+        out["describer_choice"] = (
+            f"**Choice by evidence.** The best model is `{win['model']}`: accepted on "
+            f"{win['accepted']} of {win['cases']} cases after retries (threshold {ACCEPT_MIN:.0%}: "
+            f"{'met' if dec['checks']['accepted'] else 'not met'}), repeated openings "
+            f"{got['repeated_openings']} against the template's {tpl['repeated_openings']} "
+            f"({'met' if dec['checks']['openings'] else 'not met'}), words {got['words']} against "
+            f"{tpl['words']} ({'met' if dec['checks']['words'] else 'not met'}). {verdict}"
+        )
+
+    # ------------------------------------------------------------------ scene captioner
+    if "captioner" in res:
+        from visionlens.bench import SETTING_WORDS
+
+        c = res["captioner"]
+        rows = []
+        for p in c["prompts"]:
+            real = [
+                r
+                for r in p["rows"]
+                if r["case"] in ("recorded-intersection", "recorded-traffic", "recorded-still")
+            ]
+            rows.append(
+                [
+                    p["key"] + (" (chosen)" if p["key"] == c["chosen_prompt"] else ""),
+                    f"{p['setting_ok']} / {p['cases']}",
+                    f"{sum(r['setting_ok'] for r in real)} / {len(real)}",
+                    f"{p['names_unseen']} / {p['cases']}",
+                    f"{p['one_sentence']} / {p['cases']}",
+                    f"{p['mean_seconds']} s ({p['device']}, {p['dtype']})",
+                ]
+            )
+        chosen = next(p for p in c["prompts"] if p["key"] == c["chosen_prompt"])
+        cpu = c.get("cpu")
+        out["captioner"] = (
+            f"{len(c['cases'])} cases (the 3 recorded clips, the recorded image and all 12 synthetic scenes), "
+            "three key frames per clip (10%, 50% and 90% of its length); the shown caption is the middle "
+            "frame's, cut at its first full stop. Rubric, applied automatically: (1) the caption names the "
+            "setting correctly (it contains a word from the list for that case, below), (2) it names an object "
+            "class (person, car, bus, ...) "
+            "that the detector never saw in that clip, (3) it is one complete sentence of at least four words."
+            "\n\n"
+            + table(
+                [
+                    "Prompt",
+                    "Setting named correctly (all)",
+                    "Setting named correctly (3 real captures)",
+                    "Names an unseen class",
+                    "One complete sentence",
+                    "Mean time per clip",
+                ],
+                rows,
+            )
+            + "\n\nWord lists for rubric (1) (`SETTING_WORDS` in `src/visionlens/bench.py`):\n"
+            + "\n".join(f"- {k}: {', '.join(v)}" for k, v in SETTING_WORDS.items())
+            + "\n\nPrompts:\n"
+            + "\n".join(f"- **{p['key']}**: \u201c{p['prompt']}\u201d" for p in c["prompts"])
+            + (
+                f"\n\nTime per clip (three key frames) for prompt {chosen['key']}: {chosen['mean_seconds']} s on "
+                f"{chosen['device']} ({chosen['dtype']}) over {chosen['cases']} cases"
+                + (
+                    f", {cpu['mean_seconds']} s on the {cpu['device']} ({cpu['dtype']}) over {cpu['cases']} cases "
+                    f"with the CPU {cpu['load'].get('cpu_busy_percent', 'n/a')}% busy"
+                    if cpu
+                    else ""
+                )
+                + "."
+            )
+        )
+        ex = []
+        for r in chosen["rows"]:
+            if r["case"].startswith("recorded-"):
+                ex.append(
+                    [
+                        r["case"].replace("recorded-", ""),
+                        r["shown"],
+                        "yes" if r["setting_ok"] else "no",
+                    ]
+                )
+        real_names = ("recorded-intersection", "recorded-traffic", "recorded-still")
+        real = [r for r in chosen["rows"] if r["case"] in real_names]
+        rendered = [r for r in chosen["rows"] if r["case"].startswith("synthetic-")]
+        plaza = [r for r in rendered if not r["case"].startswith("synthetic-street")]
+        quotes = sorted({r["shown"] for r in plaza})
+        out["caption_trust"] = (
+            f"**How far to trust it.** On the {len(real)} real captures (two clips and the image) it named the "
+            f"kind of place correctly in {sum(r['setting_ok'] for r in real)} of {len(real)}; over all "
+            f"{chosen['cases']} cases it named a class the detector never saw in {chosen['names_unseen']}. "
+            f"On the {len(rendered)} rendered scenes it passed the setting test in "
+            f"{sum(r['setting_ok'] for r in rendered)}. For the {len(plaza)} plaza-like scenes (dark open "
+            f"ground with building silhouettes) it wrote {len(quotes)} different captions: "
+            + "; ".join(f"\u201c{q}\u201d" for q in quotes)
+            + "."
+        )
+        out["caption_examples"] = table(
+            ["Recorded clip", "Caption shown", "Setting named correctly"], ex
+        )
 
     # ------------------------------------------------------------------ recorded demo
     rows = []
@@ -353,6 +549,13 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
             rewrite = "accepted"
         else:
             rewrite = f"rejected ({model['rejected_reason']}), template shown"
+        sc = r.get("scene")
+        if sc is None:
+            caption = "none"
+        else:
+            caption = f"\u201c{sc['text']}\u201d" + (
+                f" (flagged: names {', '.join(sc['unseen'])})" if sc["flagged"] else ""
+            )
         where = {"cuda": "GPU", "cpu": "CPU"}.get(tm.get("device", ""), "simulated detector")
         files = [root / "docs" / "demo" / clip["json"], root / "docs" / "demo" / clip["video"]]
         size = sum(f.stat().st_size for f in files)
@@ -366,6 +569,7 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
                 len(r["events"]) if meta["kind"] == "video" else "n/a",
                 f"{tm['detect_ms_mean']} ms ({where})",
                 rewrite,
+                caption,
                 f"{size / 1e6:.2f} MB",
             ]
         )
@@ -373,6 +577,7 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
         f"Recorded on {index['recorded_on']} with {index['detector']} at stride {index['stride']}; "
         f"detector device: {index['device']}"
         + (f", language model in {index['llm_dtype']}" if index.get("llm_dtype") else "")
+        + (f", captioner in {index['caption_dtype']}" if index.get("caption_dtype") else "")
         + ".\n\n"
         + table(
             [
@@ -382,6 +587,7 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
                 "Events",
                 "Detect, mean per call",
                 "Model rewrite",
+                "Scene caption (vision-language model)",
                 "Video + JSON",
             ],
             rows,

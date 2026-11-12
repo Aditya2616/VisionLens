@@ -26,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import __version__
-from .describe import Describer, make_describer
+from .describe import DEFAULT_DESCRIBER, Describer, make_describer
 from .detect.base import Detector
 from .events import EventConfig, extract_events, summarize
 from .pipeline import PipelineConfig
@@ -112,9 +112,19 @@ def _sse(name: str, data: dict) -> str:
     return f"event: {name}\ndata: {json.dumps(data)}\n\n"
 
 
-def create_app(detector: Detector | None = None, settings: Settings | None = None) -> FastAPI:
+def create_app(
+    detector: Detector | None = None,
+    settings: Settings | None = None,
+    captioner: Any | None = None,
+) -> FastAPI:
     cfg = settings or Settings()
-    state: dict[str, Any] = {"detector": detector, "jobs": {}, "sessions": {}}
+    state: dict[str, Any] = {
+        "detector": detector,
+        "captioner": captioner,
+        "describers": {},
+        "jobs": {},
+        "sessions": {},
+    }
     det_lock = threading.Lock()  # one analysis at a time: the CPU is the bottleneck
     tmp = Path(tempfile.mkdtemp(prefix="visionlens-"))
 
@@ -124,6 +134,19 @@ def create_app(detector: Detector | None = None, settings: Settings | None = Non
 
             state["detector"] = load_detector(os.environ.get("VISIONLENS_DETECTOR", "dfine-nano"))
         return state["detector"]
+
+    def get_captioner() -> Any:
+        if state["captioner"] is None:
+            from .caption import SceneCaptioner
+
+            state["captioner"] = SceneCaptioner()
+        return state["captioner"]
+
+    def get_describer(kind: str) -> Describer | None:
+        # one instance per kind, so a language model is loaded once and not on every request
+        if kind not in state["describers"]:
+            state["describers"][kind] = make_describer(kind)
+        return state["describers"][kind]
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -147,7 +170,12 @@ def create_app(detector: Detector | None = None, settings: Settings | None = Non
             sess.pop(sid, None)
 
     def run_job(
-        job: _Job, src: Path, describer: Describer | None, stride: int, delete_source: bool
+        job: _Job,
+        src: Path,
+        describer: Describer | None,
+        stride: int,
+        delete_source: bool,
+        caption: bool = False,
     ) -> None:
         folder = tmp / job.id
         try:
@@ -190,6 +218,7 @@ def create_app(detector: Detector | None = None, settings: Settings | None = Non
                     on_token=lambda t: job.emit("token", {"text": t}),
                     on_model_token=lambda t: job.emit("model_token", {"text": t}),
                     name=src.stem if not delete_source else "your upload",
+                    captioner=get_captioner() if caption else None,
                 )
                 job.media = playback
                 job.result = res
@@ -229,8 +258,9 @@ def create_app(detector: Detector | None = None, settings: Settings | None = Non
     async def analyze(
         file: UploadFile | None = File(default=None),
         sample: str | None = Form(default=None),
-        describer: str = Form(default="template"),
+        describer: str = Form(default=DEFAULT_DESCRIBER),
         stride: int = Form(default=cfg.stride),
+        caption: bool = Form(default=False),
     ) -> AnalyzeResponse:
         purge()
         if not 1 <= stride <= 10:
@@ -267,12 +297,12 @@ def create_app(detector: Detector | None = None, settings: Settings | None = Non
             shutil.rmtree(folder, ignore_errors=True)
             raise HTTPException(422, "send a file or a sample name")
         try:
-            desc = make_describer(describer)
+            desc = get_describer(describer)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(422, str(exc)) from exc
         state["jobs"][job.id] = job
         threading.Thread(
-            target=run_job, args=(job, src, desc, stride, delete_source), daemon=True
+            target=run_job, args=(job, src, desc, stride, delete_source, caption), daemon=True
         ).start()
         return AnalyzeResponse(job_id=job.id)
 

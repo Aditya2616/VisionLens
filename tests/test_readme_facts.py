@@ -104,7 +104,7 @@ def test_model_ids_in_the_readme_exist_in_code_and_facts():
     repos = {m["repo"] for m in FACTS["models"].values()}
     assert set(MODELS.values()) <= repos
     assert DEFAULT_LLM in repos and FACTS["default_llm"] == DEFAULT_LLM
-    for rid in re.findall(r"`((?:ustc-community|PekingU|Qwen)/[\w.-]+)`", README):
+    for rid in re.findall(r"`((?:ustc-community|PekingU|Qwen|HuggingFaceTB)/[\w.-]+)`", README):
         assert rid in repos, rid
     # the model the rewrite prose picks is the model the code defaults to
     assert update_readme.best_model(RESULTS)["model"] == DEFAULT_LLM
@@ -193,3 +193,44 @@ def test_british_spelling_is_used_in_the_readme(word):
         r"<!-- RESULTS:credits:start -->.*?<!-- RESULTS:credits:end -->", "", text, flags=re.S
     )
     assert not re.search(r"\b" + american[word] + r"\b", text.lower())
+
+
+def test_defaults_follow_the_evidence():
+    from visionlens.caption import PROMPT_KEY
+    from visionlens.describe import DEFAULT_DESCRIBER
+    from visionlens.describe.llm import DEFAULT_LLM
+
+    # the scene prompt in use is the one the captioner evaluation chose
+    assert RESULTS["captioner"]["chosen_prompt"] == PROMPT_KEY
+    # the default describer is what the decision rule says; the default model is the best one
+    assert update_readme.decide_default(RESULTS)["default"] == DEFAULT_DESCRIBER
+    assert update_readme.best_model(RESULTS)["model"] == DEFAULT_LLM
+    # the CLI and the API really use that default
+    run = _subparsers()["run"]
+    assert (
+        next(a.default for a in run._actions if "--describer" in a.option_strings)
+        == DEFAULT_DESCRIBER
+    )
+
+
+def test_caption_facts_agree_with_the_recorded_demo():
+    from visionlens.caption import CAPTION_MODEL
+
+    assert FACTS["caption_model"] == CAPTION_MODEL
+    assert INDEX["caption_model"] == CAPTION_MODEL
+    demo = ROOT / "docs" / "demo"
+    for clip in INDEX["clips"]:
+        r = json.loads((demo / clip["json"]).read_text("utf-8"))
+        sc = r.get("scene")
+        assert sc is not None and sc["model"] == CAPTION_MODEL, clip["id"]
+        assert sc["flagged"] == bool(sc["unseen"])
+        assert " " in sc["text"] and sc["text"].endswith(".")
+        seen = {t["cls"] for f in r["frames"] for t in f["tracks"]} | {
+            d["cls"] for f in r["frames"] for d in (f.get("dets") or [])
+        }
+        assert set(sc["unseen"]) == set(sc["named"]) - seen  # the cross-check is reproducible
+        m = (r.get("description") or {}).get("model")
+        if m:  # the guard verdict and the attempt count are consistent
+            assert m["attempts"] >= 1
+            assert m["accepted"] == (m["rejected_reason"] is None)
+            assert len(m["attempt_log"]) == (m["attempts"] - 1 if m["accepted"] else m["attempts"])

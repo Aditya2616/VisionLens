@@ -10,7 +10,8 @@ frames (video / image / webcam)
   -> Detector  (HF D-FINE nano, every `stride` frames, COCO classes, low score floor 0.15)
   -> Tracker   (own ByteTrack-style: Kalman + IoU + Hungarian; predict-only between detections)
   -> Events    (enter / leave / move / linger / count_change / proximity)
-  -> Describer (template baseline | local LLM | hosted adapter) -> streamed text
+  -> Describer (template baseline | local LLM with regenerate-on-rejection | hosted adapter) -> streamed text
+  -> Scene captioner (optional, opt-in: a small vision-language model on three key frames; separate labelled line)
   -> Result JSON {meta, frames:[{t, dets, tracks}], events, description, timings}
 ```
 
@@ -26,6 +27,8 @@ end and the static demo.
 | `detect/` | `Detector` protocol; HF adapter (D-FINE, RT-DETR); oracle/noisy detector for evaluation |
 | `track/` | box Kalman filter, IoU, two-stage association, lifecycle |
 | `events.py` | track history to typed events, thresholds in a config dataclass |
+| `caption.py` | optional scene captioner (SmolVLM), key-frame choice, cross-check of named classes against the detector |
+| `models.py` | which models `fetch-models` downloads |
 | `describe/` | `Describer` interface; grouped template; local causal LM; `guard.py` faithfulness guard; OpenAI/Anthropic adapters |
 | `pipeline.py` | orchestration as a generator (progress and partial results for streaming) |
 | `synth.py` | deterministic synthetic scenes with exact ground truth |
@@ -40,15 +43,16 @@ end and the static demo.
   crossing paths, class gating, second pass beating single pass on noisy input.
 - Events are deterministic and are the source of truth; the LLM only rephrases, with a faithfulness guard and fallback.
 - Browser draws overlays; the server returns original video (CFR WebM) plus Result JSON. Same for static demo.
-- Models fetched by `visionlens fetch-models` (the default detector; `--llm` adds the rewrite model; no captioner).
-  Sizes are in the README. Nothing is committed.
+- Models fetched by `visionlens fetch-models` (the default detector; `--llm` adds the rewrite model; `--caption` adds
+  the scene captioner). Sizes are in the README. Nothing is committed.
 
 ## 4. API (FastAPI, port 8106)
 
 - `GET /health`: status, whether the detector is loaded, the upload limits.
-- `GET /api/samples`; `POST /api/analyze` (video or image upload, or a bundled sample; options stride and describer)
+- `GET /api/samples`; `POST /api/analyze` (video or image upload, or a bundled sample; options stride, describer and caption)
   returns `job_id`; `GET /api/jobs/{id}` is the status; `GET /api/jobs/{id}/stream` is SSE (`status`, `progress`,
-  `token`, `model_token`, `done`, `error`); `GET /api/jobs/{id}/result` and `/video` return the result and the media.
+  `token`, `model_token`, `done`, `error`); `GET /api/jobs/{id}/result` and `/video` return the result and the media. The describers and the captioner are
+  created once and reused.
 - `POST /api/frame`: single-frame detect+track for webcam live mode (browser `getUserMedia`, JPEG at ~3-5 FPS,
   per-session tracker with expiry).
 - Typed models, upload size/duration/resolution caps, uploads deleted after processing.

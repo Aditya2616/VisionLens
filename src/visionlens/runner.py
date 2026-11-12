@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .describe import Describer
 from .detect.base import Detector
 from .pipeline import Pipeline, PipelineConfig, analyze_image
 from .schemas import FrameResult, Result
 from .sysutil import default_threads
+
+if TYPE_CHECKING:
+    from .caption import SceneCaptioner
+
 from .video import (
     WebmWriter,
     effective_fps,
@@ -38,16 +43,20 @@ def analyze_file(
     threads: int | None = None,
     machine_note: str = "",
     name: str | None = None,
+    captioner: SceneCaptioner | None = None,
 ) -> Result:
     """Run the whole pipeline on a file. If playback_path is given, the resized frames are
     also written there as VP9 WebM so the browser can play exactly what was analysed."""
     path = Path(path)
     name = name or path.stem
     if is_image(path):
-        return analyze_image(detector, read_image(path), name)
+        return analyze_image(detector, read_image(path), name, captioner)
     info = probe(path)
     fps = effective_fps(info, target_fps)
     width, height = output_size(info, max_width)
+    config = config or PipelineConfig()
+    if captioner is not None:
+        config.keep_keyframes = True
     pipe = Pipeline(detector, config)
     expected = int(min(info.duration or 1e9, max_seconds or 1e9) * fps) or None
     writer = WebmWriter(playback_path, fps, (width, height)) if playback_path else None
@@ -86,5 +95,6 @@ def analyze_file(
         threads=threads or default_threads(),
         truncated=truncated,
         machine_note=machine_note,
+        captioner=captioner,
     )
     return result

@@ -144,6 +144,10 @@ def run(mode: str, out: Path) -> int:
                     page.locator("#stage").screenshot(path=out / f"{name}-4b-selected.png")
                 else:
                     problems.append(f"{name}: no boxes to tap")
+                if page.locator("#d-scene").is_hidden():
+                    problems.append(f"{name}: the recorded scene caption is not shown")
+                elif "VISION-LANGUAGE" not in page.inner_text("#d-scene h3").upper():
+                    problems.append(f"{name}: the scene line is not labelled")
                 page.click('[data-tab="model"]')
                 page.wait_for_timeout(1500)
                 page.screenshot(path=out / f"{name}-5-model-tab.png", full_page=True)
@@ -243,6 +247,18 @@ def live_checks(browser, out: Path, problems: list[str], logs: list[str]) -> Non
     page.screenshot(path=out / "live-2-result.png")
     if "Live result" not in page.inner_text("#d-tag"):
         problems.append("live result tag missing")
+    if page.locator("#d-scene").is_visible():
+        problems.append("live: a caption appeared although the scene caption was off")
+    # the same clip again with the scene caption switched on
+    page.select_option("#opt-caption", "on")
+    page.set_input_files("#file", str(ROOT / "docs" / "demo" / "traffic.webm"))
+    page.wait_for_selector("#busy:not([hidden])", timeout=5000)
+    page.wait_for_selector("#busy", state="hidden", timeout=300000)
+    page.wait_for_timeout(1500)
+    page.screenshot(path=out / "live-2b-caption.png")
+    if page.locator("#d-scene").is_hidden():
+        problems.append("live: no scene line although the caption was switched on")
+    page.select_option("#opt-caption", "off")
     # image upload
     page.set_input_files("#file", str(ROOT / "docs" / "demo" / "still.jpg"))
     page.wait_for_selector("#busy:not([hidden])", timeout=5000)

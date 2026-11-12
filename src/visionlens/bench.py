@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .describe.llm import DEFAULT_LLM, SMALL_LLM
 from .metrics import evaluate
 from .schemas import Detection
 from .synth import SCENES, NoiseConfig, NoisyOracle, make_scene
@@ -221,7 +222,7 @@ def bench_pipeline(
 
 
 # ----------------------------------------------------------------------------- describer
-DESCRIBER_MODELS = ("Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct")
+DESCRIBER_MODELS = (SMALL_LLM, DEFAULT_LLM)
 
 
 def _describer_cases() -> list[tuple[str, Facts]]:
@@ -260,6 +261,29 @@ def _describer_cases() -> list[tuple[str, Facts]]:
     return cases
 
 
+def readability(text: str) -> dict:
+    """Objective measures of how a description reads: sentence count, words, words per sentence,
+    and repeated openings (neighbouring sentences that start with the same word)."""
+    import re
+
+    sents = [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
+    firsts = [
+        re.findall(r"[A-Za-z0-9']+", s)[0].lower() for s in sents if re.findall(r"[A-Za-z0-9']+", s)
+    ]
+    words = len(text.split())
+    return {
+        "sentences": len(sents),
+        "words": words,
+        "words_per_sentence": round(words / max(1, len(sents)), 1),
+        "repeated_openings": sum(1 for a, b in zip(firsts, firsts[1:], strict=False) if a == b),
+    }
+
+
+def _mean_readability(rows: list[dict]) -> dict:
+    keys = ("sentences", "words", "words_per_sentence", "repeated_openings")
+    return {k: round(float(np.mean([r[k] for r in rows])), 2) for k in keys} if rows else {}
+
+
 def _run_model(model_id: str, device: str | None, cases, label: str) -> dict:
     from .describe import build_description
     from .describe.llm import LocalLLMDescriber
@@ -272,47 +296,275 @@ def _run_model(model_id: str, device: str | None, cases, label: str) -> dict:
         d = build_description(facts, tpl, llm)
         mv = d.model
         assert mv is not None
+        shown = mv.text if d.used == "model" else tpl.text
         rows.append(
             {
                 "case": name,
                 "accepted": mv.accepted,
+                "first_try": mv.accepted and mv.attempts == 1,
+                "attempts": mv.attempts,
+                "attempt_log": mv.attempt_log,
                 "reason": mv.rejected_reason,
                 "seconds": mv.seconds,
-                "chars": len(mv.text),
                 "text": mv.text,
+                "shown_is_rewrite": d.used == "model",
+                "readability_shown": readability(shown),
                 "template": tpl.text,
             }
         )
-        print(label, model_id, name, mv.accepted, mv.rejected_reason, mv.seconds, flush=True)
-    acc = sum(1 for r in rows if r["accepted"])
+        print(
+            label,
+            model_id,
+            name,
+            mv.accepted,
+            mv.attempts,
+            mv.rejected_reason,
+            mv.seconds,
+            flush=True,
+        )
+    n = len(rows)
+    acc = sum(r["accepted"] for r in rows)
+    first = sum(r["first_try"] for r in rows)
+    accepted_rows = [r["readability_shown"] for r in rows if r["accepted"]]
     return {
         "model": model_id,
         "device": llm.device,
         "dtype": llm.dtype,
-        "cases": len(rows),
+        "max_attempts": 3,
+        "cases": n,
         "accepted": acc,
-        "rejected": len(rows) - acc,
-        "acceptance_rate": round(acc / len(rows), 3),
+        "rejected": n - acc,
+        "acceptance_rate": round(acc / n, 3),
+        "accepted_first_try": first,
+        "first_try_rate": round(first / n, 3),
+        "mean_attempts": round(float(np.mean([r["attempts"] for r in rows])), 2),
         "mean_seconds": round(float(np.mean([r["seconds"] for r in rows])), 2),
+        "readability_shown": _mean_readability([r["readability_shown"] for r in rows]),
+        "readability_accepted_rewrites": _mean_readability(accepted_rows),
         "rows": rows,
     }
 
 
 def bench_describer(device: str | None = None, cpu_cases: int = 3) -> dict:
-    """Rewrite the grouped template facts with each local model and count guard rejections.
+    """Rewrite the grouped template facts with each local model, regenerating a rejected rewrite
+    (up to 3 attempts, the guard's reason fed back), and compare how the results read.
 
     The full set runs on the GPU in float16 when there is one. A few cases are also timed on the
     CPU in float32 (threads as limited by the caller) because that is what a CPU-only user gets.
     """
+    from .describe.template import TemplateDescriber
+
     cases = _describer_cases()
-    out: dict = {"cases": [n for n, _ in cases], "models": []}
+    tpl_rows = []
+    for name, facts in cases:
+        text = TemplateDescriber().describe(facts).text
+        tpl_rows.append({"case": name, "text": text, **readability(text)})
+    out: dict = {
+        "cases": [n for n, _ in cases],
+        "template": {"readability": _mean_readability(tpl_rows), "rows": tpl_rows},
+        "models": [],
+    }
     for model_id in DESCRIBER_MODELS:
         r = _run_model(model_id, device, cases, "describer")
         if r["device"] != "cpu":
             sub = _run_model(model_id, "cpu", cases[:cpu_cases], "describer-cpu")
-            r["cpu"] = {k: sub[k] for k in ("device", "dtype", "cases", "mean_seconds")}
+            r["cpu"] = {
+                k: sub[k] for k in ("device", "dtype", "cases", "mean_seconds", "mean_attempts")
+            }
             r["cpu"]["load"] = observed_load()
         out["models"].append(r)
+    return out
+
+
+# ---------------------------------------------------------------------------- captioner
+SETTING_WORDS = {
+    "intersection": (
+        "street",
+        "road",
+        "intersection",
+        "junction",
+        "crossroads",
+        "crossing",
+        "city",
+        "urban",
+        "tram",
+        "traffic",
+    ),
+    "traffic": (
+        "street",
+        "road",
+        "village",
+        "town",
+        "residential",
+        "neighbourhood",
+        "neighborhood",
+        "suburb",
+        "lane",
+    ),
+    "still": (
+        "street",
+        "road",
+        "village",
+        "town",
+        "residential",
+        "neighbourhood",
+        "neighborhood",
+        "suburb",
+        "lane",
+    ),
+    "synthetic-street": (
+        "street",
+        "road",
+        "city",
+        "urban",
+        "town",
+        "crosswalk",
+        "sidewalk",
+        "crossing",
+    ),
+    # the other rendered scenes show people on an open dark ground in front of building silhouettes
+    "synthetic-plaza": (
+        "city",
+        "urban",
+        "town",
+        "plaza",
+        "square",
+        "courtyard",
+        "buildings",
+        "night",
+        "dark",
+        "street",
+        "road",
+    ),
+}
+
+
+def _sentence_count(text: str) -> int:
+    import re
+
+    return len([s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()])
+
+
+def _caption_cases() -> list[tuple[str, list[tuple[float, np.ndarray]], set[str], tuple[str, ...]]]:
+    """The recorded clips and image plus all 12 synthetic scenes, each with three key frames, the
+    classes the detector saw, and the words that count as naming the setting correctly."""
+    import cv2
+
+    from .caption import pick_keyframes
+    from .schemas import Result
+
+    cases = []
+    demo = ROOT / "docs" / "demo"
+    for clip in ("intersection", "traffic", "synthetic"):
+        cap = cv2.VideoCapture(str(demo / f"{clip}.webm"))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 10.0
+        thumbs, i = [], 0
+        while True:
+            ok, f = cap.read()
+            if not ok:
+                break
+            thumbs.append((i, i / fps, f))
+            i += 1
+        cap.release()
+        r = Result.model_validate_json((demo / f"{clip}.json").read_text("utf-8"))
+        seen = {t.cls for fr in r.frames for t in fr.tracks} | {
+            d.cls for fr in r.frames for d in (fr.dets or [])
+        }
+        words = SETTING_WORDS["synthetic-street" if clip == "synthetic" else clip]
+        cases.append((f"recorded-{clip}", pick_keyframes(thumbs), seen, words))
+    r = Result.model_validate_json((demo / "still.json").read_text("utf-8"))
+    img = cv2.imread(str(demo / "still.jpg"))
+    seen = {d.cls for d in r.frames[0].dets or []}
+    cases.append(("recorded-still", [(0.0, img)], seen, SETTING_WORDS["still"]))
+    for name in SCENES:
+        for seed in range(3):
+            sc = make_scene(name, seed)
+            thumbs = [(i, i / sc.fps, sc.render(i)) for i in range(0, sc.n_frames, 5)]
+            seen = {c for i in range(sc.n_frames) for _, _, _, c in sc.gt(i)}
+            cases.append(
+                (
+                    f"synthetic-{name}-{seed}",
+                    pick_keyframes(thumbs),
+                    seen,
+                    SETTING_WORDS["synthetic-street" if name == "street" else "synthetic-plaza"],
+                )
+            )
+    return cases
+
+
+def _run_captioner(prompt_key: str, device: str | None, cases, label: str) -> dict:
+    from .caption import PROMPTS, SceneCaptioner, first_sentence, named_classes
+
+    cap = SceneCaptioner(device=device, prompt=PROMPTS[prompt_key])
+    cap.generate(cases[0][1][0][1])  # warm-up, so the timings are steady-state calls
+    rows = []
+    for name, frames, seen, words in cases:
+        t0 = time.perf_counter()
+        raw = [cap.generate(f) for _, f in frames]
+        seconds = time.perf_counter() - t0
+        shown_raw = raw[len(raw) // 2]
+        shown = first_sentence(shown_raw)
+        named = named_classes(shown)
+        unseen = [c for c in named if c not in seen]
+        rows.append(
+            {
+                "case": name,
+                "shown": shown,
+                "frames": [first_sentence(x) for x in raw],
+                "named": named,
+                "unseen": unseen,
+                "setting_ok": any(w in shown.lower() for w in words),
+                "one_sentence": shown_raw.strip().endswith((".", "!", "?"))
+                and _sentence_count(shown_raw) == 1
+                and len(shown_raw.split()) >= 4,
+                "seconds": round(seconds, 2),
+            }
+        )
+        print(
+            label, prompt_key, name, rows[-1]["setting_ok"], unseen, rows[-1]["seconds"], flush=True
+        )
+    n = len(rows)
+    return {
+        "key": prompt_key,
+        "prompt": PROMPTS[prompt_key],
+        "device": cap.device,
+        "dtype": cap.dtype,
+        "cases": n,
+        "setting_ok": sum(r["setting_ok"] for r in rows),
+        "names_unseen": sum(bool(r["unseen"]) for r in rows),
+        "one_sentence": sum(r["one_sentence"] for r in rows),
+        "mean_seconds": round(float(np.mean([r["seconds"] for r in rows])), 2),
+        "rows": rows,
+    }
+
+
+def bench_captioner(device: str | None = None, cpu_cases: int = 3) -> dict:
+    """Evaluate the scene captioner with a simple stated rubric on every case:
+    (1) does the shown caption name the setting correctly (a word from a per-case list),
+    (2) does it name an object class the detector never saw in that clip,
+    (3) is the model's answer one complete sentence of at least four words (generation stops at
+    the first full stop; an answer cut off by the token limit fails). Three prompts are compared
+    on the GPU; the chosen prompt is also timed on the CPU for a few cases."""
+    from .caption import CAPTION_MODEL, PROMPTS
+
+    cases = _caption_cases()
+    out: dict = {"model": CAPTION_MODEL, "cases": [c[0] for c in cases], "prompts": []}
+    for key in PROMPTS:
+        out["prompts"].append(_run_captioner(key, device, cases, "caption"))
+    best = max(
+        out["prompts"],
+        key=lambda p: (p["setting_ok"], p["one_sentence"], -p["names_unseen"], -p["mean_seconds"]),
+    )
+    out["chosen_prompt"] = best["key"]
+    if best["device"] != "cpu":
+        sub = _run_captioner(best["key"], "cpu", cases[:cpu_cases], "caption-cpu")
+        out["cpu"] = {
+            "device": sub["device"],
+            "dtype": sub["dtype"],
+            "cases": sub["cases"],
+            "mean_seconds": sub["mean_seconds"],
+            "load": observed_load(),
+        }
     return out
 
 
@@ -369,6 +621,11 @@ def run_all(
         if gpu != "cpu":
             results["pipeline_gpu"] = bench_pipeline(device=gpu)
         track_load("pipeline", before)
+        save()
+    if "captioner" not in skip:
+        before = observed_load()
+        results["captioner"] = bench_captioner(device=gpu_device)
+        track_load("captioner", before)
         save()
     if "describer" not in skip:
         before = observed_load()

@@ -131,11 +131,18 @@ def _compose(items: list[tuple[int, int, float, str, list[str], bool]]) -> list[
     return out
 
 
-def build_sentences(events: list[Event], duration: float, summary: dict) -> list[Sentence]:
+def build_sentences(
+    events: list[Event],
+    duration: float,
+    summary: dict,
+    lines: list[str] | None = None,
+) -> list[Sentence]:
     """Summarise the events the way a person would: counts, grouped statements, notable events.
 
     Deterministic. Every sentence lists the ids of the events it states, so the UI can link a
-    sentence to its tracks and timeline marks.
+    sentence to its tracks and timeline marks. When `lines` is given, the same facts are also
+    appended to it as a compact structured list ("- start: person 7 entered from the right")
+    for the language-model prompt.
     """
     tracks, by_class, peak = (
         summary.get("tracks", 0),
@@ -275,6 +282,17 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
     if len(body) > MAX_BODY:
         kept = sorted(body, key=lambda x: (x[0], -x[1], x[2]))[:MAX_BODY]
     out += _compose(kept)
+    if lines is not None:
+        lines.append(
+            f"Clip: {duration:.0f} seconds. Objects tracked: {tracks} ({counts_phrase(by_class)}); "
+            f"up to {peak} in view at once."
+        )
+        for x in sorted(kept, key=lambda x: (x[5], -1 if x[2] < START else int(x[2]), x[0], x[2])):
+            if x[5]:
+                when = "start" if x[2] < START else fmt_t(x[2])
+                lines.append(f"- {when}: {x[3]}")
+            else:
+                lines.append(f"- whole clip: {x[3].rstrip('.')}")
     shown = {eid for x in kept for eid in x[4]}
     left_out = [
         e
@@ -296,8 +314,10 @@ class TemplateDescriber:
     name = "template"
 
     def describe(self, facts: Facts, on_token: TokenCallback | None = None) -> DescriptionVariant:
-        sentences = build_sentences(facts.events, facts.duration, facts.summary)
+        lines: list[str] = []
+        sentences = build_sentences(facts.events, facts.duration, facts.summary, lines)
         facts.sentences = sentences
+        facts.lines = lines
         text = " ".join(s.text for s in sentences)
         if on_token:
             for s in sentences:

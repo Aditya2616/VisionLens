@@ -58,6 +58,11 @@ class DescriptionVariant(BaseModel):
     accepted: bool = True
     rejected_reason: str | None = None
     seconds: float | None = None
+    attempts: int = 1
+    attempt_log: list[str] = Field(
+        default_factory=list,
+        description="Why each rejected attempt was rejected (the guard's reason), in order",
+    )
 
 
 class Description(BaseModel):
@@ -66,11 +71,33 @@ class Description(BaseModel):
     used: Literal["template", "model"] = "template"
 
 
+class SceneFrameCaption(BaseModel):
+    t: float
+    text: str
+
+
+class SceneCaption(BaseModel):
+    """The vision-language model's line about the setting. Separate from the event description."""
+
+    text: str = Field(description="The caption of the middle key frame, one sentence")
+    model: str
+    device: str
+    dtype: str
+    seconds: float = Field(description="Time to caption all key frames of this clip")
+    frames: list[SceneFrameCaption] = Field(default_factory=list)
+    named: list[str] = Field(default_factory=list, description="Detector classes the caption names")
+    unseen: list[str] = Field(
+        default_factory=list, description="Named classes the detector never saw in this clip"
+    )
+    flagged: bool = False
+
+
 class Timings(BaseModel):
     detect_ms_mean: float = 0.0
     detect_ms_p95: float = 0.0
     track_ms_mean: float = 0.0
     detect_calls: int = 0
+    caption_s: float = 0.0
     wall_s: float = 0.0
     fps_end_to_end: float = 0.0
     threads: int = 0
@@ -101,6 +128,9 @@ class Result(BaseModel):
     frames: list[FrameResult]
     events: list[Event]
     description: Description | None = None
+    scene: SceneCaption | None = Field(
+        default=None, description="Optional vision-language caption of the setting (opt-in)"
+    )
     timings: Timings = Field(default_factory=Timings)
     summary: dict[str, Any] = Field(default_factory=dict)
     ground_truth: list[list[dict[str, Any]]] | None = Field(

@@ -10,7 +10,7 @@ history is turned into a plain-language description. It runs offline, on a CPU o
 Open the static demo (recorded runs of the real pipeline, no backend) by serving `docs/` with any static server, or on
 GitHub Pages. Run it live (upload, webcam, your own clips) with `visionlens serve`.
 
-Live mode (local server, your own upload) and the synthetic clip with the ground-truth layer:
+Live mode (local server, your own upload, with the scene caption switched on) and the synthetic clip with the ground-truth layer:
 
 ![Live mode](docs/assets/live-mode.png)
 
@@ -31,9 +31,14 @@ Live mode (local server, your own upload) and the synthetic clip with the ground
    events in time order, capped in length with the rest folded into a closing count. Every sentence keeps the ids of
    the events it states, so tapping it highlights them. Optionally a small local language model rewrites the text, and
    a **faithfulness guard** rejects any rewrite whose objects, counts, times, directions or event verbs are not
-   supported by the event list, falling back to the template.
+   supported by the event list. A rejected rewrite is regenerated (up to three attempts, with the guard's reason fed
+   back) and, if it is still rejected, the template is shown.
+4. **Scene (optional, opt-in).** A small vision-language model captions a few key frames and the middle frame's
+   caption is shown as its own labelled line, "scene (vision-language model)", for what the events cannot know (the
+   kind of place). It is never merged into the event sentences; if it names an object class the detector never saw in
+   the clip, the result flags it.
 
-The web page draws everything from the pipeline's real output: a lime scanner sweep reveals each box with its label and
+The web page draws everything from the pipeline's real output (the scene line and the guard verdict included): a lime scanner sweep reveals each box with its label and
 confidence, raw detections can be flipped against tracks to see what the tracker adds, tapping a box selects its track,
 an event timeline scrubs and seeks, and a stage strip shows the measured milliseconds of each stage and the device the
 detector ran on.
@@ -49,8 +54,13 @@ flowchart LR
   E --> L[Local LLM rewrite<br/>optional]
   L --> G{Faithfulness<br/>guard}
   G -- ok --> O[Description]
-  G -- rejected --> TP
+  G -- rejected, up to 3 attempts --> L
+  G -- still rejected --> TP
   TP --> O
+  V --> VLM[Scene captioner<br/>vision-language model, opt-in]
+  VLM --> X{Objects named vs<br/>classes detected}
+  X --> S[Scene line, flagged if a<br/>named class was never seen]
+  S --> R
   T --> R[(Result JSON)]
   E --> R
   O --> R
@@ -76,12 +86,13 @@ visionlens serve                # http://127.0.0.1:8106
 ```
 
 <!-- RESULTS:downloads:start -->
-`visionlens fetch-models` downloads the default detector (15 MB). `--llm` also downloads the optional rewrite model, Qwen2.5-0.5B-Instruct (1.0 GB), and `--all` fetches both comparison detectors as well (1.1 GB in total).
+`visionlens fetch-models` downloads the default detector (15 MB). `--llm` adds the optional rewrite model, Qwen2.5-1.5B-Instruct (3.1 GB), `--caption` adds the optional scene captioner, SmolVLM-256M-Instruct (518 MB; only the weights and tokenizer files, not the repository's ONNX exports), and `--all` fetches everything in the models table (4.8 GB in total).
 <!-- RESULTS:downloads:end -->
 
 ```bash
 visionlens run docs/demo/traffic.webm                  # writes outputs/traffic.visionlens.json and prints the description
 visionlens run docs/demo/traffic.webm --describer llm # plus the local model rewrite and the guard verdict
+visionlens run docs/demo/traffic.webm --caption        # plus the scene line from the vision-language model
 visionlens run docs/demo/still.jpg                     # a single image
 visionlens annotate docs/demo/traffic.webm outputs/traffic.visionlens.json   # draws boxes and ids into outputs/traffic.annotated.webm
 visionlens bench --out results/results.json            # every number in the Results section
@@ -121,6 +132,7 @@ The webcam starts only after an explicit tap; frames are processed on your machi
 | `PekingU/rtdetr_r18vd` | Apache-2.0 | 20.2 | 81 MB | 46.5 ([source](https://huggingface.co/PekingU/rtdetr_r18vd)) |
 | `Qwen/Qwen2.5-0.5B-Instruct` | Apache-2.0 | 494 | 1.0 GB | n/a |
 | `Qwen/Qwen2.5-1.5B-Instruct` | Apache-2.0 | 1544 | 3.1 GB | n/a |
+| `HuggingFaceTB/SmolVLM-256M-Instruct` | Apache-2.0 | 256 | 518 MB | n/a |
 
 Licence, parameters and download size are read from the Hugging Face hub on 2026-11-12 (`scripts/fetch_facts.py`). The AP figures are quoted from the sources linked, not measured here.
 <!-- RESULTS:models:end -->
@@ -146,9 +158,10 @@ CPU-busy percentage during its own run; an idle machine will be faster.
 <!-- RESULTS:load:start -->
 | Group | Before | After |
 |---|---|---|
-| describer | CPU 55% busy, GPU 83% busy, 13453 of 16311 MB of its memory in use | CPU 49% busy, GPU 84% busy, 12151 of 16311 MB of its memory in use |
+| describer | CPU 11% busy, GPU 0% busy, 835 of 16311 MB of its memory in use | CPU 74% busy, GPU 87% busy, 10114 of 16311 MB of its memory in use |
 | detectors | CPU 58% busy, GPU 83% busy, 12914 of 16311 MB of its memory in use | CPU 69% busy, GPU 82% busy, 13439 of 16311 MB of its memory in use |
 | pipeline | CPU 65% busy, GPU 83% busy, 13439 of 16311 MB of its memory in use | CPU 59% busy, GPU 86% busy, 13453 of 16311 MB of its memory in use |
+| captioner | CPU 34% busy, GPU 37% busy, 5196 of 16311 MB of its memory in use | CPU 20% busy, GPU 0% busy, 1555 of 16311 MB of its memory in use |
 <!-- RESULTS:load:end -->
 
 ### Detector speed
@@ -240,18 +253,36 @@ Per scene (default tracker):
 
 ### The language-model rewrite and the guard
 
-<!-- RESULTS:describer:start -->
-15 cases: 12 synthetic scenes (every scene type x 3 seeds, simulated detector) and the 3 recorded clips, rewritten from the grouped template facts with greedy decoding.
+The facts reach the model as a compact structured list ("- 0:03: person 15 appeared in the scene and stayed in
+place"), with a prompt that asks for a short natural paragraph. If the guard rejects the paragraph it is
+regenerated, up to three attempts in all, with the guard's reason and the offending sentence in the conversation.
 
-| Model | Guard accepted | Mean time per rewrite, GPU | Mean time per rewrite, CPU |
-|---|---|---|---|
-| Qwen/Qwen2.5-0.5B-Instruct | 13 / 15 (87%) | 12.22 s (cuda, float16) | 24.83 s (cpu, float32, 3 cases, CPU 65.1% busy) |
-| Qwen/Qwen2.5-1.5B-Instruct | 6 / 15 (40%) | 22.45 s (cuda, float16) | 53.47 s (cpu, float32, 3 cases, CPU 55.3% busy) |
+<!-- RESULTS:describer:start -->
+15 cases: 12 synthetic scenes (every scene type x 3 seeds, simulated detector) and the 3 recorded clips. The facts go to the model as a compact structured list; a rewrite the guard rejects is regenerated, up to 3 attempts in all, with the guard's reason and the offending sentence fed back. Greedy decoding.
+
+| Model | Accepted on the first try | Accepted after retries | Mean attempts | Mean time per clip, GPU | Mean time per clip, CPU |
+|---|---|---|---|---|---|
+| Qwen/Qwen2.5-0.5B-Instruct | 9 / 15 (60%) | 9 / 15 (60%) | 1.8 | 10.43 s (cuda, float16) | 17.93 s, 1.0 attempts (cpu, float32, 3 cases, CPU 26.4% busy) |
+| Qwen/Qwen2.5-1.5B-Instruct | 7 / 15 (47%) | 13 / 15 (87%) | 1.8 | 12.34 s (cuda, float16) | 76.13 s, 2.0 attempts (cpu, float32, 3 cases, CPU 65.0% busy) |
 <!-- RESULTS:describer:end -->
 
-Why rewrites were rejected (counted over both models):
+How the results read, measured objectively on the same cases:
+
+<!-- RESULTS:describer_readability:start -->
+Means over the same cases. Repeated openings counts neighbouring sentences that start with the same word.
+
+| Text | Sentences | Words | Words per sentence | Repeated openings |
+|---|---|---|---|---|
+| Template | 8.87 | 143.13 | 16.19 | 0.0 |
+| `Qwen2.5-0.5B-Instruct`, text shown (accepted rewrite, else the template) | 7.0 | 110.2 | 16.47 | 0.93 |
+| `Qwen2.5-0.5B-Instruct`, accepted rewrites only | 5.78 | 94.67 | 17.32 | 1.56 |
+| `Qwen2.5-1.5B-Instruct`, text shown (accepted rewrite, else the template) | 7.0 | 100.47 | 15.07 | 0.13 |
+| `Qwen2.5-1.5B-Instruct`, accepted rewrites only | 6.69 | 93.54 | 14.9 | 0.15 |
+<!-- RESULTS:describer_readability:end -->
+
+Why attempts were rejected (counted over all attempts of both models):
 <!-- RESULTS:describer_reasons:start -->
-4 x object that was not tracked, 3 x direction contradicts the events, 2 x event verb not supported by the events, 2 x wrong or invented count
+25 x wrong or invented count, 3 x event verb not supported by the events, 3 x direction contradicts the events, 1 x object that was not tracked
 <!-- RESULTS:describer_reasons:end -->
 
 What the guard checks, per sentence, against the typed event list and not against the template wording: every object
@@ -260,20 +291,68 @@ lie within a second of an event of the objects mentioned; directions agree ("fro
 "toward the right" with the exit edge or direction of travel, "moved right" with the direction); event verbs
 (entered, left, stayed or stopped, moved, came close together) are supported by an event of that kind. Tests feed it
 deliberately corrupted rewrites (flipped direction, wrong count, invented object, wrong time, an exit that never
-happened) and it must reject each one (`tests/test_describe_grouping.py`).
+happened) and it must reject each one (`tests/test_describe_grouping.py`), and they check the regenerate-on-rejection
+loop (`tests/test_caption_and_retry.py`).
 
 It is still a lexical parser, not a proof. It cannot see an invented setting ("a busy city street"), and a rewrite
-that keeps every id, number, direction and verb consistent but drops or reorders facts passes. Reading the accepted
-rewrites, the smaller model mostly re-voices the template's sentences with a framing sentence added; it does not
-summarise much, whatever the prompt asks. So the rewrite adds some fluency and costs seconds per clip.
+that keeps every id, number, direction and verb consistent but drops or reorders facts passes.
+
+<!-- RESULTS:retry_effect:start -->
+Effect of the retries: for `Qwen2.5-0.5B-Instruct` retries moved acceptance from 9 of 15 cases on the first try to 9 of 15 (mean 1.8 attempts); in 6 of its 6 final rejections every attempt failed for the same reason; for `Qwen2.5-1.5B-Instruct` retries moved acceptance from 7 of 15 cases on the first try to 13 of 15 (mean 1.8 attempts); in 1 of its 2 final rejections every attempt failed for the same reason.
+<!-- RESULTS:retry_effect:end -->
 
 <!-- RESULTS:describer_choice:start -->
-**Choice by evidence.** `Qwen/Qwen2.5-0.5B-Instruct` is the model for the rewrite: the guard accepted 13 of 15 of its rewrites against 6 of 15 for `Qwen/Qwen2.5-1.5B-Instruct`, and its mean CPU time was 24.83 s against 53.47 s.
+**Choice by evidence.** The best model is `Qwen/Qwen2.5-1.5B-Instruct`: accepted on 13 of 15 cases after retries (threshold 90%: not met), repeated openings 0.13 against the template's 0.0 (not met), words 100.47 against 143.13 (met). The rewrite does not pass all three tests, so the template stays the default describer and the rewrite is an option.
 <!-- RESULTS:describer_choice:end -->
-The template stays the default describer everywhere (CLI, API and page) because it is instant, deterministic and
-cannot invent anything. The rewrite is an option (`--describer llm`, or the dropdown in live mode) and runs on the GPU
-when there is one. In the recorded demo the Template tab opens first; the Model tab shows the real rewrite of each
-clip with the guard verdict, or the labelled fallback when the guard rejected it.
+In the recorded demo the Template tab opens first; the Model tab shows the real rewrite of each clip with the
+guard verdict and the number of attempts, or the labelled fallback when the guard rejected it.
+
+### The scene captioner
+
+<!-- RESULTS:captioner:start -->
+16 cases (the 3 recorded clips, the recorded image and all 12 synthetic scenes), three key frames per clip (10%, 50% and 90% of its length); the shown caption is the middle frame's, cut at its first full stop. Rubric, applied automatically: (1) the caption names the setting correctly (it contains a word from the list for that case, below), (2) it names an object class (person, car, bus, ...) that the detector never saw in that clip, (3) it is one complete sentence of at least four words.
+
+| Prompt | Setting named correctly (all) | Setting named correctly (3 real captures) | Names an unseen class | One complete sentence | Mean time per clip |
+|---|---|---|---|---|---|
+| A | 7 / 16 | 3 / 3 | 0 / 16 | 14 / 16 | 2.74 s (cuda, float16) |
+| B | 6 / 16 | 2 / 3 | 0 / 16 | 0 / 16 | 1.53 s (cuda, float16) |
+| C (chosen) | 10 / 16 | 3 / 3 | 0 / 16 | 16 / 16 | 4.24 s (cuda, float16) |
+
+Word lists for rubric (1) (`SETTING_WORDS` in `src/visionlens/bench.py`):
+- intersection: street, road, intersection, junction, crossroads, crossing, city, urban, tram, traffic
+- traffic: street, road, village, town, residential, neighbourhood, neighborhood, suburb, lane
+- still: street, road, village, town, residential, neighbourhood, neighborhood, suburb, lane
+- synthetic-street: street, road, city, urban, town, crosswalk, sidewalk, crossing
+- synthetic-plaza: city, urban, town, plaza, square, courtyard, buildings, night, dark, street, road
+
+Prompts:
+- **A**: “Describe the place in this image in one short sentence: the kind of setting and the main things you can see. Do not describe individual people.”
+- **B**: “What kind of place is this? Answer with one short sentence that names the place and the main things in it.”
+- **C**: “Describe the setting of this image in one complete sentence of at least eight words: what kind of place it is and what is in it.”
+
+Time per clip (three key frames) for prompt C: 4.24 s on cuda (float16) over 16 cases, 11.31 s on the cpu (float32) over 3 cases with the CPU 31.8% busy.
+<!-- RESULTS:captioner:end -->
+
+The captions the evaluation run produced for the recorded clips (the chosen prompt; the recorded demo has its own
+captions, taken from its own key frames and shown in the table below):
+
+<!-- RESULTS:caption_examples:start -->
+| Recorded clip | Caption shown | Setting named correctly |
+|---|---|---|
+| intersection | The image depicts an urban street scene with a focus on a busy intersection. | yes |
+| traffic | The image depicts a street scene in a quaint town. | yes |
+| synthetic | The image is a cartoon-style illustration of a city street. | yes |
+| still | The image depicts a residential area with a mix of residential buildings and a few commercial establishments. | yes |
+<!-- RESULTS:caption_examples:end -->
+
+<!-- RESULTS:caption_trust:start -->
+**How far to trust it.** On the 3 real captures (two clips and the image) it named the kind of place correctly in 3 of 3; over all 16 cases it named a class the detector never saw in 0. On the 12 rendered scenes it passed the setting test in 6. For the 9 plaza-like scenes (dark open ground with building silhouettes) it wrote 5 different captions: “The image shows a group of four people standing together on a dark, possibly nighttime, stage.”; “The image shows a group of people standing in a circle, seemingly in a communal or collective setting.”; “The image shows a group of people, each holding a different piece of a puzzle, arranged in a circle.”; “The image shows a group of people, each holding a puzzle piece, arranged in a circle.”; “The image shows a scene from a video game, specifically a level where players need to solve puzzles to progress.”.
+<!-- RESULTS:caption_trust:end -->
+
+It is opt-in (`--caption`, or the "Scene caption" dropdown in live mode) because it needs a second model and costs
+seconds per clip; it is not part of the event description and does not change it. A caption can still be wrong in ways
+the class cross-check cannot see (the setting, the weather, how many things there are), so it is shown as a separate,
+labelled line.
 
 ### The recorded demo
 
@@ -281,14 +360,14 @@ The page replays these files from `docs/demo/`; the counts, timings and device i
 read from the same JSON.
 
 <!-- RESULTS:demo:start -->
-Recorded on 2026-11-12 with dfine-nano at stride 2; detector device: cuda (NVIDIA GeForce RTX 5060 Ti), language model in float16.
+Recorded on 2026-11-12 with dfine-nano at stride 2; detector device: cuda (NVIDIA GeForce RTX 5060 Ti), language model in float16, captioner in float16.
 
-| Clip | Length | Tracks | Events | Detect, mean per call | Model rewrite | Video + JSON |
-|---|---|---|---|---|---|---|
-| Street corner, fixed camera | 80 frames, 8 s | 15 | 51 | 167.5 ms (GPU) | accepted | 1.55 MB |
-| Village road, no people | 80 frames, 8 s | 8 | 27 | 56.8 ms (GPU) | accepted | 1.45 MB |
-| Synthetic street, with ground truth | 80 frames, 8 s | 7 | 29 | 0.2 ms (simulated detector) | accepted | 0.18 MB |
-| Single image | image | n/a | n/a | 202.2 ms (GPU) | none | 0.03 MB |
+| Clip | Length | Tracks | Events | Detect, mean per call | Model rewrite | Scene caption (vision-language model) | Video + JSON |
+|---|---|---|---|---|---|---|---|
+| Street corner, fixed camera | 80 frames, 8 s | 15 | 51 | 175.4 ms (GPU) | rejected ('the left' disagrees with the exit edge or direction of travel), template shown | “The image depicts an urban street scene with a focus on a busy intersection.” | 1.55 MB |
+| Village road, no people | 80 frames, 8 s | 8 | 27 | 53.2 ms (GPU) | accepted | “The image depicts a street scene in a residential area, likely in a suburban or small town setting.” | 1.45 MB |
+| Synthetic street, with ground truth | 80 frames, 8 s | 7 | 29 | 0.5 ms (simulated detector) | accepted | “The image is a scene from a street scene, featuring a group of people standing on the road.” | 0.18 MB |
+| Single image | image | n/a | n/a | 59.9 ms (GPU) | none | “The image depicts a residential area with a mix of residential buildings and a few commercial establishments.” | 0.03 MB |
 <!-- RESULTS:demo:end -->
 
 ## Design decisions
@@ -305,8 +384,9 @@ Recorded on 2026-11-12 with dfine-nano at stride 2; detector device: cuda (NVIDI
   Drawing in the browser avoids that, makes the layer toggles free and lets the static site work.
 - **No Ultralytics YOLO.** Its AGPL licence is incompatible with an MIT repository; D-FINE and RT-DETR are
   Apache-2.0.
-- **No VLM captioner.** Detection, tracking and events already supply the facts; a third model was not worth its
-  latency on a CPU.
+- **The captioner is opt-in and kept apart.** The site promises a multimodal pipeline, and events cannot say what kind
+  of place a clip shows, so a small vision-language model captions a few key frames. Its line is labelled, separate
+  from the event sentences, cross-checked against the detector's classes, and off by default because of its cost.
 
 ## Browser support
 
@@ -336,8 +416,10 @@ results/           results.json, the output of `visionlens bench`
   clip shows this.
 - The tracker has no appearance model, so identities can swap when objects cross closely for a long time.
 - Real footage has no ground truth here, so there is no accuracy number for it. Tracking numbers are synthetic only.
-- The local Qwen2.5 models are slow on a CPU and the smaller one often repeats the template's wording; the rewrite is a
-  demonstration of the guarded approach, not a better describer.
+- The local Qwen2.5 models are slow on a CPU; the rewrite is a guarded option, and by the evidence above it is not the
+  default describer.
+- The scene captioner is a 256 M-parameter model; its captions are generic, it fails the word-list test on the
+  plaza-like rendered scenes, and the cross-check only covers detector classes (person, car, bus, and so on).
 - Timings were measured on a shared machine; the load tables above give the CPU and GPU load seen during each run.
 - The hosted describers (OpenAI, Anthropic; see `.env.example`) take their key and model id from `OPENAI_API_KEY` and
   `OPENAI_MODEL`, or `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (or a constructor argument). There is no default model
@@ -345,13 +427,14 @@ results/           results.json, the output of `visionlens bench`
   template). They are adapters tested against a stubbed HTTP transport only; I have not run them against the real
   services.
 - Tested paths that ran for real: D-FINE nano, small and RT-DETR r18vd inference, the local Qwen2.5 rewrites, the
-  server, uploads, and the webcam under Chromium's fake camera.
+  SmolVLM captioner, the server, uploads, and the webcam under Chromium's fake camera.
 
 ## Credits and licences
 
 Code: MIT, copyright Aditya Jain.
 
-- Models: D-FINE (Peng et al.) and RT-DETR weights from the Hugging Face hub, and Qwen2.5 for the optional rewrite;
+- Models: D-FINE (Peng et al.) and RT-DETR weights from the Hugging Face hub, Qwen2.5 for the optional rewrite and
+  SmolVLM for the optional scene caption;
   licences are in the models table above. Weights are downloaded, never committed.
 - Sample clips, all CC0 from Wikimedia Commons (credits also in the page footer and `data/samples.json`):
 <!-- RESULTS:credits:start -->

@@ -19,13 +19,14 @@ export async function probeServer(timeoutMs = 1500) {
 }
 
 /** Start an analysis job (file or sample) and stream its events. Resolves with the finished result. */
-export function analyze({ file, sample, describer, stride }, h) {
+export function analyze({ file, sample, describer, stride, caption }, h) {
   return new Promise((resolve, reject) => {
     const fd = new FormData();
     if (file) fd.append('file', file);
     if (sample) fd.append('sample', sample);
     fd.append('describer', describer);
     fd.append('stride', String(stride));
+    fd.append('caption', caption ? 'true' : 'false');
     fetch('api/analyze', { method: 'POST', body: fd })
       .then(async (r) => {
         if (!r.ok) {

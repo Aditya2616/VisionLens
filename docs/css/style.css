@@ -234,6 +234,12 @@ h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: 
 .text .s.sel { background: rgba(215, 255, 63, 0.2); color: var(--bone); box-shadow: 0 0 0 3px rgba(215, 255, 63, 0.2); }
 .text .caret { display: inline-block; width: 7px; height: 1em; margin-left: 2px; background: var(--lime); vertical-align: text-bottom; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+.scene { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.scene h3 { margin: 0 0 8px; font-size: 10.5px; font-weight: 500; letter-spacing: 0.16em; color: var(--mute); }
+.scene p { margin: 0; }
+.scene-meta { margin-top: 8px !important; font-size: 10.5px; color: var(--dim); }
+.scene-flag { margin-top: 8px !important; font-size: 11px; color: var(--ember); }
+.scene-flag[hidden] { display: none; }
 .guard { margin: 12px 0 0; font-size: 11px; color: var(--ember); border-left: 2px solid var(--ember); padding-left: 10px; }
 .guard.ok { color: var(--lime); border-color: var(--lime); }
 .counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
