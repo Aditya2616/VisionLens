@@ -44,7 +44,7 @@ def test_template_is_deterministic_and_cites_events():
         "2 objects were tracked over 10 seconds: 1 person and 1 car. Up to 2 were in view at once."
     )
     assert "At 0:02, person 1 entered from the left and moved right at a steady pace." in v.text
-    assert "At 0:06, person 1 and car 2 came close together for 2 seconds." in v.text
+    assert "Person 1 and car 2 came close together for 2 seconds at 0:06." in v.text
     assert "At 0:09, person 1 left toward the right." in v.text
     cited = {eid for s in v.sentences for eid in s.event_ids}
     assert {"e0", "e1", "e2", "e3", "e4"} <= cited

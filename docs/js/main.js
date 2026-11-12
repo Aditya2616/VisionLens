@@ -180,6 +180,8 @@ function renderStats(result, label) {
   const t = result.timings;
   const m = result.meta;
   const s = result.summary || {};
+  const dev = t.device === 'cuda' ? 'GPU' : t.device === 'cpu' ? 'CPU' : '';
+  $('#s-detect-k').textContent = dev ? `01 DETECT · ${dev}` : '01 DETECT';
   $('#s-detect').textContent = t.detect_ms_mean ? `${t.detect_ms_mean} ms` : '–';
   $('#s-detect-sub').textContent = `${m.detector.split(' ')[0]} · ${m.input_size || '–'}px · every ${m.stride}f`;
   $('#s-track').textContent = m.kind === 'image' ? 'n/a' : `${t.track_ms_mean} ms`;

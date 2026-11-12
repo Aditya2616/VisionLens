@@ -30,6 +30,18 @@ def blocks(res: dict) -> dict[str, str]:
         f"Python {m['python']}, {m['date']}. Load: {m['load_note'] or 'not recorded'}"
     )
     lo = res.get("load_observed", {})
+
+    def busy(group: str) -> str:
+        v = lo.get(group) or {}
+        a = (v.get("before") or {}).get("cpu_busy_percent")
+        b = (v.get("after") or {}).get("cpu_busy_percent")
+        if a is None or b is None:
+            return "CPU load not recorded for this group"
+        return (
+            f"measured with the CPU about {(a + b) / 2:.0f}% busy with other work "
+            f"(sampled {a:.0f}% before, {b:.0f}% after); an idle machine will be faster"
+        )
+
     if lo:
 
         def fmt(x: dict | None) -> str:
@@ -47,6 +59,15 @@ def blocks(res: dict) -> dict[str, str]:
             f"{g}: {fmt(v.get('before'))} before, {fmt(v.get('after'))} after"
             for g, v in lo.items()
         )
+
+    def gpu_busy(group: str) -> str:
+        v = lo.get(group) or {}
+        a = (v.get("before") or {}).get("gpu_busy_percent")
+        b = (v.get("after") or {}).get("gpu_busy_percent")
+        if a is None or b is None:
+            return "GPU load not recorded"
+        return f"GPU about {(a + b) / 2:.0f}% busy with other work"
+
     if "detectors" in res:
         gpu = {(d["model"], d["input_size"]): d for d in res.get("detectors_gpu", [])}
         rows = []
@@ -80,7 +101,7 @@ def blocks(res: dict) -> dict[str, str]:
             )
             + "\n\n"
             + f"One detector call on a 480x270 frame (resized to the input size), batch 1, {res['detectors'][0]['frames']} frames, per-call time includes pre- and post-processing. "
-            f"CPU columns: {res['machine']['threads_used']} threads, float32. GPU column: {res['machine'].get('gpu') or 'n/a'}, float32."
+            f"CPU columns: {res['machine']['threads_used']} threads, float32, {busy('detectors')}. GPU column: {res['machine'].get('gpu') or 'n/a'}, float32, {gpu_busy('detectors')}."
         )
     if "pipeline" in res:
         prow = []
@@ -101,7 +122,10 @@ def blocks(res: dict) -> dict[str, str]:
                     p["fps_end_to_end"],
                 ]
             )
-        out["pipeline"] = table(
+        out["pipeline"] = (
+            f"CPU row: {res['machine']['threads_used']} threads, {busy('pipeline')}. "
+            f"GPU row: float32 detector, {gpu_busy('pipeline')}.\n\n"
+        ) + table(
             [
                 "Detector on",
                 "Clip",

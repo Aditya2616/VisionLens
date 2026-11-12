@@ -104,6 +104,7 @@ class Pipeline:
             fps_end_to_end=round(n / wall, 2) if wall > 0 else 0.0,
             threads=threads,
             cpu=cpu_name(),
+            device=getattr(self.detector, "device", ""),
             machine_note=machine_note,
         )
         meta = Meta(
@@ -168,6 +169,7 @@ def analyze_image(detector: Detector, image: np.ndarray, name: str = "image") ->
             detect_calls=1,
             wall_s=round(ms / 1000, 2),
             cpu=cpu_name(),
+            device=getattr(detector, "device", ""),
         ),
         summary={"tracks": 0, "by_class": by_class, "peak": len(dets)},
     )

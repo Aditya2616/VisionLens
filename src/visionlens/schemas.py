@@ -75,6 +75,7 @@ class Timings(BaseModel):
     fps_end_to_end: float = 0.0
     threads: int = 0
     cpu: str = ""
+    device: str = ""  # where the detector ran: "cpu" or "cuda" (empty for simulated detectors)
     machine_note: str = ""
 
 

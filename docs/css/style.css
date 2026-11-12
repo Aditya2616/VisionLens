@@ -274,6 +274,7 @@ dialog .src b { color: var(--bone); font-weight: 500; }
   .strip .cell { padding: 9px 10px; border-left: 1px solid var(--line); }
   .strip .cell:first-child { border-left: 0; }
   .strip .v { font-size: 17px; }
+  .strip .k { letter-spacing: 0.05em; white-space: nowrap; }
   .stage { max-height: none; }
   .time { min-width: 66px; font-size: 11px; }
   .tl-head .dim { display: none; }

@@ -112,34 +112,30 @@ timings (the page says so in the badge tooltip).
 
 **Machine.**
 <!-- RESULTS:machine:start -->
-Measured on AMD Ryzen 5 8500G w/ Radeon 740M Graphics (12 logical cores; 3 threads used), PyTorch 2.11.0+cu128 (CPU rows forced to the CPU), transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15, 2026-11-12. Load: CPU rows: 3 threads, measured on a shared workstation whose CPU was saturated by other jobs (model training and evaluation), so they are pessimistic. GPU rows: RTX 5060 Ti, float32 detector, float16 language model, 2-3 CPU threads for pre- and post-processing; the GPU was shared with other jobs.
+Measured on AMD Ryzen 5 8500G w/ Radeon 740M Graphics (12 logical cores; 3 threads used), PyTorch 2.11.0+cu128 (CPU rows forced to the CPU), transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15, 2026-11-12. Load: CPU rows: 3 threads, measured while other projects' jobs kept the CPU busy (see the load samples); an idle machine will be faster. GPU rows: RTX 5060 Ti shared with other jobs, float32 detector, float16 language model.
 <!-- RESULTS:machine:end -->
 
 **Load observed by the benchmark itself** (sampled before and after each group):
 <!-- RESULTS:load:start -->
-describer: CPU 100% busy, GPU 26% busy, 7040 of 16311 MB used before, CPU 88% busy, GPU 55% busy, 9104 of 16311 MB used after
+describer: CPU 55% busy, GPU 83% busy, 13453 of 16311 MB used before, CPU 49% busy, GPU 84% busy, 12151 of 16311 MB used after; detectors: CPU 58% busy, GPU 83% busy, 12914 of 16311 MB used before, CPU 69% busy, GPU 82% busy, 13439 of 16311 MB used after; pipeline: CPU 65% busy, GPU 83% busy, 13439 of 16311 MB used before, CPU 59% busy, GPU 86% busy, 13453 of 16311 MB used after
 <!-- RESULTS:load:end -->
 
-The CPU timings below were taken while the CPU was busy with other work, so they are provisional: they are what this
-machine did under that load, not what the models can do on an idle CPU. A clean idle-machine run replaces them (same
-command). The GPU columns are labelled with device and precision.
+Each CPU table below states the CPU-busy percentage the benchmark sampled while it ran; the GPU columns state device and
+precision.
 
 ### Detector speed
 
 <!-- RESULTS:detectors:start -->
 | Detector | Input px | Params (M) | CPU median ms | CPU p95 ms | CPU FPS | GPU median ms / FPS | Dets/frame |
 |---|---|---|---|---|---|---|---|
-| dfine-nano | 640 | 3.8 | 257.2 | 516.8 | 3.89 | 68.5 ms / 14.6 | 44.51 |
-| dfine-nano | 480 | 3.8 | 203.1 | 427.2 | 4.92 | 62.4 ms / 16.04 | 42.11 |
-| dfine-nano | 320 | 3.8 | 120.3 | 174.0 | 8.31 | 49.7 ms / 20.1 | 26.68 |
-| dfine-small | 640 | 10.3 | 493.3 | 561.4 | 2.03 | 73.7 ms / 13.58 | 47.16 |
-| rtdetr-r18 | 640 | 20.2 | 657.2 | 759.5 | 1.52 | 52.4 ms / 19.07 | 29.89 |
+| dfine-nano | 640 | 3.8 | 149.4 | 190.8 | 6.69 | 105.2 ms / 9.51 | 44.51 |
+| dfine-nano | 480 | 3.8 | 109.2 | 134.3 | 9.15 | 106.0 ms / 9.43 | 42.11 |
+| dfine-nano | 320 | 3.8 | 63.2 | 83.5 | 15.82 | 88.9 ms / 11.25 | 26.68 |
+| dfine-small | 640 | 10.3 | 419.1 | 576.5 | 2.39 | 97.6 ms / 10.25 | 47.16 |
+| rtdetr-r18 | 640 | 20.2 | 545.7 | 608.0 | 1.83 | 67.6 ms / 14.8 | 29.89 |
 
-One detector call on a 480x270 frame (resized to the input size), batch 1, 37 frames, per-call time includes pre- and post-processing. CPU columns: 3 threads, float32. GPU column: NVIDIA GeForce RTX 5060 Ti, float32.
+One detector call on a 480x270 frame (resized to the input size), batch 1, 37 frames, per-call time includes pre- and post-processing. CPU columns: 3 threads, float32, measured with the CPU about 63% busy with other work (sampled 58% before, 69% after); an idle machine will be faster. GPU column: NVIDIA GeForce RTX 5060 Ti, float32, GPU about 82% busy with other work.
 <!-- RESULTS:detectors:end -->
-
-Other jobs were using the CPU during the run and the load changed between rows, so treat the CPU numbers as
-rough (the p95 column shows the spread). Rerun `visionlens bench` on an idle machine for clean timings.
 
 Published COCO AP of these models (D-FINE nano about 42.8, small about 48.5, RT-DETR r18vd about 46.5) is quoted from
 the papers and model cards, not measured here.
@@ -147,10 +143,12 @@ the papers and model cards, not measured here.
 ### End to end, on a real clip
 
 <!-- RESULTS:pipeline:start -->
+CPU row: 3 threads, measured with the CPU about 62% busy with other work (sampled 65% before, 59% after); an idle machine will be faster. GPU row: float32 detector, GPU about 84% busy with other work.
+
 | Detector on | Clip | Frames | Detector | Input | Stride | Detector calls | Detect ms (mean / p95) | Track ms (mean) | End-to-end FPS |
 |---|---|---|---|---|---|---|---|---|---|
-| CPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 236.6 / 326.8 | 0.513 | 12.3 |
-| GPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 76.1 / 107.6 | 0.499 | 36.45 |
+| CPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 189.0 / 221.0 | 0.481 | 15.35 |
+| GPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 107.4 / 155.3 | 0.461 | 26.72 |
 <!-- RESULTS:pipeline:end -->
 
 ### Tracking quality (synthetic scenes with exact ground truth)
@@ -218,13 +216,13 @@ Per scene (default tracker):
 
 | Model | Guard accepted | Mean time per rewrite, GPU | Mean time per rewrite, CPU |
 |---|---|---|---|
-| Qwen/Qwen2.5-0.5B-Instruct | 13 / 15 (87%) | 9.92 s (cuda, float16) | 18.73 s (cpu, float32, 3 cases, CPU 47.3% busy) |
-| Qwen/Qwen2.5-1.5B-Instruct | 6 / 15 (40%) | 8.86 s (cuda, float16) | 45.6 s (cpu, float32, 3 cases, CPU 94.9% busy) |
+| Qwen/Qwen2.5-0.5B-Instruct | 13 / 15 (87%) | 12.22 s (cuda, float16) | 24.83 s (cpu, float32, 3 cases, CPU 65.1% busy) |
+| Qwen/Qwen2.5-1.5B-Instruct | 6 / 15 (40%) | 22.45 s (cuda, float16) | 53.47 s (cpu, float32, 3 cases, CPU 55.3% busy) |
 <!-- RESULTS:describer:end -->
 
 Why rewrites were rejected (counted over both models):
 <!-- RESULTS:describer_reasons:start -->
-5 x wrong or invented count, 5 x direction contradicts the events, 1 x object that was not tracked
+4 x object that was not tracked, 3 x direction contradicts the events, 2 x event verb not supported by the events, 2 x wrong or invented count
 <!-- RESULTS:describer_reasons:end -->
 
 What the guard checks, per sentence, against the typed event list and not against the template wording: every object

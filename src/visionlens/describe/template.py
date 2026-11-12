@@ -35,7 +35,7 @@ def name(cls: str, tid: int) -> str:
 
 
 WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
-MAX_BODY = 8  # sentences after the opening one; the rest is folded into a closing count
+MAX_BODY = 10  # sentences after the opening one; the rest is folded into a closing count
 
 
 def num(n: int) -> str:
@@ -83,6 +83,54 @@ def _bucket_groups(items: list, key, window: float = 1.0) -> list[list]:
     return out
 
 
+START = 1.0  # events in the first second are "at the start"
+_STYLES = ("At", "Around", "suffix")
+
+
+def _compose(items: list[tuple[int, int, float, str, list[str], bool]]) -> list[Sentence]:
+    """Turn clauses into sentences: clip-wide statements first, then clauses that share a time
+    bucket are merged, and the way a time is introduced rotates so no two neighbouring sentences
+    open the same way. Deterministic."""
+    out = [
+        Sentence(text=x[3], event_ids=x[4]) for x in sorted(items, key=lambda x: x[2]) if not x[5]
+    ]
+
+    def bucket(x) -> int:
+        return -1 if x[2] < START else int(x[2])
+
+    timed = sorted((x for x in items if x[5]), key=lambda x: (bucket(x), x[0], x[2]))
+    groups: list[list] = []
+    for x in timed:
+        key = "start" if x[2] < START else int(x[2])
+        if groups and groups[-1][0] == key:
+            groups[-1][1].append(x)
+        else:
+            groups.append([key, [x]])
+    style = 1 if groups and groups[0][0] == "start" else 0
+    for key, xs in groups:
+        for c in range(0, len(xs), 3):
+            chunk = xs[c : c + 3]
+            cores = [x[3] for x in chunk]
+            body = cores[0] if len(cores) == 1 else "; ".join(cores[:-1]) + "; and " + cores[-1]
+            ids = [i for x in chunk for i in x[4]]
+            if key == "start":
+                text = f"At the start, {body}." if c == 0 else f"Also, {body}."
+            elif c > 0:
+                text = f"Also, {body}."
+            else:
+                t = fmt_t(chunk[0][2])
+                how = _STYLES[style % 3]
+                style += 1
+                if how == "At":
+                    text = f"At {t}, {body}."
+                elif how == "Around":
+                    text = f"Around {t}, {body}."
+                else:
+                    text = f"{_upper(body)} at {t}."
+            out.append(Sentence(text=text, event_ids=ids))
+    return out
+
+
 def build_sentences(events: list[Event], duration: float, summary: dict) -> list[Sentence]:
     """Summarise the events the way a person would: counts, grouped statements, notable events.
 
@@ -111,10 +159,11 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
     stops = [e for e in events if e.kind == "linger" and not e.data.get("whole_stay")]
 
     # (tier, size, time, sentence); tier 0 always stays, higher tiers are dropped first when capped
-    body: list[tuple[int, int, float, Sentence]] = []
+    body: list[tuple[int, int, float, str, list[str], bool]] = []
 
-    def add(tier: int, size: int, t: float, text: str, ids: list[str]) -> None:
-        body.append((tier, size, t, Sentence(text=text, event_ids=ids)))
+    def add(tier: int, size: int, t: float, text: str, ids: list[str], timed: bool = True) -> None:
+        """`text` is a clause without a time when `timed`; composed into sentences at the end."""
+        body.append((tier, size, t, text, ids, timed))
 
     # 1. objects that never moved and were there the whole clip
     still = [i for i in whole if i not in enter and i not in leave]
@@ -127,6 +176,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
             0.0,
             f"{_upper(subject(mem))} {verb} throughout.",
             [whole[i].id for i in still],
+            timed=False,
         )
     # 2. objects already moving when the clip began
     starters = [(m, i) for i, m in move.items() if m.data.get("from_start") and i not in enter]
@@ -142,6 +192,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
             f"{_upper(subject(mem))} {'were' if many else 'was'} already in view and moved "
             f"{d['direction']}{speed}.",
             [m.id for m, _ in g],
+            timed=False,
         )
 
     # 3. entries, merged with what the same track then did
@@ -166,7 +217,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
             where += f" and {txt}" + (f" {speed}" if len(g) == 1 and speed else "")
         ids = [x[0].id for x in g] + [y for x in g for y in x[3]]
         tier = 1 if (len(g) > 1 or txt) else 2
-        add(tier, len(g), e0.t, f"At {fmt_t(e0.t)}, {subject(mem)} {where}.", ids)
+        add(tier, len(g), e0.t, f"{subject(mem)} {where}", ids)
     # 4. stops
     for g in _bucket_groups([(e, e.ids[0]) for e in stops], lambda x: round(x[0].data["duration"])):
         mem = [(x[0].classes[0], x[1]) for x in g]
@@ -175,7 +226,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
             1,
             len(g),
             e0.t,
-            f"At {fmt_t(e0.t)}, {subject(mem)} stopped for {_secs(e0.data['duration'])}.",
+            f"{subject(mem)} stopped for {_secs(e0.data['duration'])}",
             [x[0].id for x in g],
         )
     # 5. objects coming close together: the two longest get a sentence, the rest one summary
@@ -186,7 +237,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
             1,
             2,
             e.t,
-            f"At {fmt_t(e.t)}, {a} and {b} came close together for {_secs(e.data['duration'])}.",
+            f"{a} and {b} came close together for {_secs(e.data['duration'])}",
             [e.id],
         )
     if len(prox) > 2:
@@ -196,7 +247,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
             2,
             n,
             min(e.t for e in rest),
-            f"{_upper(num(n))} other {'pair' if n == 1 else 'pairs'} also came close together.",
+            f"{num(n)} other {'pair' if n == 1 else 'pairs'} came close together",
             [e.id for e in rest],
         )
     # 6. exits
@@ -206,7 +257,7 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
         edge = e0.data.get("edge")
         mem = [(x[0].classes[0], x[1]) for x in g]
         what = f"left toward the {edge}" if edge else "disappeared from view"
-        add(2, len(g), e0.t, f"At {fmt_t(e0.t)}, {subject(mem)} {what}.", [x[0].id for x in g])
+        add(2, len(g), e0.t, f"{subject(mem)} {what}", [x[0].id for x in g])
     # 7. busiest moment
     counts = [e for e in events if e.kind == "count_change"]
     if counts and peak > 1:
@@ -216,17 +267,15 @@ def build_sentences(events: list[Event], duration: float, summary: dict) -> list
                 2,
                 0,
                 top.t,
-                f"The busiest moment was at {fmt_t(top.t)}, with {top.data['count']} in view.",
+                f"the scene was at its busiest, with {top.data['count']} in view",
                 [top.id],
             )
 
     kept = body
     if len(body) > MAX_BODY:
         kept = sorted(body, key=lambda x: (x[0], -x[1], x[2]))[:MAX_BODY]
-    # clip-wide statements first, then everything else in time order
-    kept = sorted(kept, key=lambda x: (x[0] != 0, x[2]))
-    out += [x[3] for x in kept]
-    shown = {eid for x in kept for eid in x[3].event_ids}
+    out += _compose(kept)
+    shown = {eid for x in kept for eid in x[4]}
     left_out = [
         e
         for e in events

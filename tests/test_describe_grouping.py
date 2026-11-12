@@ -70,10 +70,10 @@ def test_sentences_map_to_the_events_they_state():
 
 def test_long_scenes_are_capped_and_the_rest_is_counted():
     events = []
-    for k in range(20):
-        events.append(ev(k, k * 0.5, "enter", [k + 1], ["car"], edge="left" if k % 2 else "top"))
-    s = build_sentences(events, 12.0, {"tracks": 20, "by_class": {"car": 20}, "peak": 4})
-    assert len(s) <= 1 + 8 + 1
+    for k in range(24):
+        events.append(ev(k, k * 1.1, "enter", [k + 1], ["car"], edge="left" if k % 2 else "top"))
+    s = build_sentences(events, 30.0, {"tracks": 24, "by_class": {"car": 24}, "peak": 4})
+    assert len(s) <= 1 + 10 + 1
     assert "shown on the timeline" in s[-1].text
     cited = {i for x in s for i in x.event_ids}
     assert cited == {e.id for e in events}  # nothing is dropped silently
@@ -115,3 +115,32 @@ def test_guard_accepts_a_faithful_paraphrase():
 def test_guard_rejects_corrupted_rewrites(bad, reason):
     ok, why = check_faithful(bad, facts())
     assert not ok and reason in why, why
+
+
+def test_wording_merges_a_time_bucket_and_never_repeats_an_opening():
+    events = []
+    for k in range(7):
+        events.append(
+            ev(k, k * 1.4 + 0.2, "enter", [k + 1], ["car"], edge="left" if k % 2 else "top")
+        )
+    sents = [
+        x.text
+        for x in build_sentences(events, 12.0, {"tracks": 7, "by_class": {"car": 7}, "peak": 3})
+    ]
+    body = sents[1:]
+    assert body[0].startswith("At the start,")
+    openings = [t.split(" ")[0] for t in body]
+    assert all(a != b for a, b in zip(openings, openings[1:], strict=False)), body
+
+
+def test_events_in_one_bucket_share_one_sentence():
+    events = [
+        ev(0, 0.2, "enter", [1], ["person"], edge="left"),
+        ev(1, 0.4, "enter", [2], ["car"], edge="right"),
+        ev(2, 0.6, "leave", [3], ["person"], edge="top"),
+    ]
+    sents = build_sentences(
+        events, 5.0, {"tracks": 3, "by_class": {"person": 2, "car": 1}, "peak": 3}
+    )
+    assert len(sents) == 2 and sents[1].text.startswith("At the start, ")
+    assert sorted(sents[1].event_ids) == ["e0", "e1", "e2"]
