@@ -25,6 +25,11 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--fps", type=float, default=15.0, help="analysis frame rate cap")
 
 
+def default_output(input_path: str | Path, suffix: str) -> Path:
+    """Where results go unless --out says otherwise: ./outputs/<name><suffix> (git-ignored)."""
+    return Path("outputs") / f"{Path(input_path).stem}{suffix}"
+
+
 def _apply_device(args: argparse.Namespace) -> None:
     import os
 
@@ -65,7 +70,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         threads=args.threads,
     )
     print(file=sys.stderr)
-    out = Path(args.out) if args.out else Path(args.input).with_suffix(".visionlens.json")
+    out = Path(args.out) if args.out else default_output(args.input, ".visionlens.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(res.model_dump_json(), "utf-8")
     d = res.description
     print(d.template.text if d else "")
@@ -87,8 +93,10 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     from .schemas import Result
 
     res = Result.model_validate_json(Path(args.result).read_text("utf-8"))
-    annotate_video(args.input, res, args.out, show_dets=args.show_dets)
-    print(f"wrote {args.out}")
+    out = Path(args.out) if args.out else default_output(args.input, ".annotated.webm")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    annotate_video(args.input, res, out, show_dets=args.show_dets)
+    print(f"wrote {out}")
     return 0
 
 
@@ -142,8 +150,12 @@ def cmd_make_synthetic(args: argparse.Namespace) -> int:
     from .synth import make_scene, render_video
 
     sc = make_scene(args.scene, args.seed, seconds=args.seconds)
-    render_video(sc, args.out)
-    print(f"wrote {args.out}")
+    out = (
+        Path(args.out) if args.out else Path("outputs") / f"synthetic-{args.scene}-{args.seed}.webm"
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    render_video(sc, str(out))
+    print(f"wrote {out}")
     return 0
 
 
@@ -163,13 +175,13 @@ def cmd_record_demo(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="visionlens", description="Detect, track and describe.")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("run", help="analyse a video or image")
     p.add_argument("input")
-    p.add_argument("--out", help="result JSON path")
+    p.add_argument("--out", help="result JSON path (default: outputs/<name>.visionlens.json)")
     p.add_argument("--video-out", help="also write the analysed frames as VP9 WebM")
     _common(p)
     p.set_defaults(fn=cmd_run)
@@ -177,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("annotate", help="draw a result onto a video")
     p.add_argument("input")
     p.add_argument("result")
-    p.add_argument("--out", default="annotated.webm")
+    p.add_argument("--out", help="output WebM (default: outputs/<name>.annotated.webm)")
     p.add_argument("--show-dets", action="store_true")
     p.set_defaults(fn=cmd_annotate)
 
@@ -210,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("make-synthetic", help="render a synthetic scene to WebM")
     p.add_argument("scene", choices=["crossing", "occlusion", "crowd", "street"])
-    p.add_argument("--out", default="synthetic.webm")
+    p.add_argument("--out", help="output WebM (default: outputs/synthetic-<scene>-<seed>.webm)")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--seconds", type=float, default=10.0)
     p.set_defaults(fn=cmd_make_synthetic)
@@ -221,7 +233,11 @@ def main(argv: list[str] | None = None) -> int:
     _common(p)
     p.set_defaults(fn=cmd_record_demo)
 
-    args = ap.parse_args(argv)
+    return ap
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     return int(args.fn(args))
 
 

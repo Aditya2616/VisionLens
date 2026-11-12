@@ -1,0 +1,47 @@
+{
+  "fetched_on": "2026-11-12",
+  "models": {
+    "dfine-nano": {
+      "repo": "ustc-community/dfine-nano-coco",
+      "licence": "apache-2.0",
+      "params": 3798993,
+      "download_bytes": 15290325,
+      "revision": "066438d3d8f0da137a37b38fdf3368fd4afceced",
+      "published_ap": 42.8,
+      "ap_source": "https://github.com/Peterande/D-FINE"
+    },
+    "dfine-small": {
+      "repo": "ustc-community/dfine-small-coco",
+      "licence": "apache-2.0",
+      "params": 10350057,
+      "download_bytes": 41509285,
+      "revision": "f79e65b5fbb33ceb9d3ebba042955d7410c608f8",
+      "published_ap": 48.5,
+      "ap_source": "https://github.com/Peterande/D-FINE"
+    },
+    "rtdetr-r18": {
+      "repo": "PekingU/rtdetr_r18vd",
+      "licence": "apache-2.0",
+      "params": 20209680,
+      "download_bytes": 80920881,
+      "revision": "ac77a11ff0170a41b771c03264987f8ce2b0d753",
+      "published_ap": 46.5,
+      "ap_source": "https://huggingface.co/PekingU/rtdetr_r18vd"
+    },
+    "qwen-0.5b": {
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+      "licence": "apache-2.0",
+      "params": 494032768,
+      "download_bytes": 999604126,
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775"
+    },
+    "qwen-1.5b": {
+      "repo": "Qwen/Qwen2.5-1.5B-Instruct",
+      "licence": "apache-2.0",
+      "params": 1543714304,
+      "download_bytes": 3098973447,
+      "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+    }
+  },
+  "default_llm": "Qwen/Qwen2.5-0.5B-Instruct"
+}

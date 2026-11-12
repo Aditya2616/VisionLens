@@ -9,9 +9,9 @@ timings are pessimistic and noisy. The numbers in the README come from `visionle
 
 | Model (HF id) | Params | Licence | Weights | Notes |
 |---|---|---|---|---|
-| D-FINE nano (`ustc-community/dfine-nano-coco`) | 3.8M [measured] | Apache-2.0 | 15 MB | ~42.8 COCO AP [claimed, paper]. Native in transformers 5.7. |
-| D-FINE small (`ustc-community/dfine-small-coco`) | 10.3M | Apache-2.0 | 41 MB | ~48.5 AP [claimed] |
-| RT-DETR r18vd (`PekingU/rtdetr_r18vd`) | 20.2M | Apache-2.0 | 81 MB | ~46.5 AP [claimed] |
+| D-FINE nano (`ustc-community/dfine-nano-coco`) | 3.8M | Apache-2.0 | 15 MB | 42.8 COCO AP [claimed, paper]. Native in transformers 5.7. |
+| D-FINE small (`ustc-community/dfine-small-coco`) | 10.4M | Apache-2.0 | 42 MB | 48.5 AP [claimed] |
+| RT-DETR r18vd (`PekingU/rtdetr_r18vd`) | 20.2M | Apache-2.0 | 81 MB | 46.5 AP [claimed] |
 | RT-DETRv2 r18vd (`PekingU/rtdetr_v2_r18vd`) | 20.2M | Apache-2.0 | 81 MB | ~47.9 AP [claimed] |
 | YOLOS-tiny (`hustvl/yolos-tiny`) | 6.5M | Apache-2.0 | 52 MB | ~28.7 AP [claimed]; variable-size input |
 | DETR ResNet-50 (`facebook/detr-resnet-50`) | 41.5M | Apache-2.0 | 160 MB | 42 AP [claimed]; slowest |
@@ -20,23 +20,14 @@ timings are pessimistic and noisy. The numbers in the README come from `visionle
 Excluded on licence: Ultralytics YOLOv5/8/11 (AGPL-3.0, would force the repo to AGPL or a commercial licence). That is
 why a DETR-family model is used.
 
-**CPU speed, one 640x480 image, preprocessing + forward + postprocess, 6 threads [measured, contended machine]:**
-
-| Model | ms/img | FPS |
-|---|---|---|
-| D-FINE nano | 162 | 6.2 |
-| D-FINE small | 361 | 2.8 |
-| YOLOS-tiny | 255 | 3.9 |
-| RT-DETR r18vd | 526 | 1.9 |
-| RT-DETRv2 r18vd | 956 | 1.0 |
-| DETR R50 | 2125 | 0.5 |
-
-D-FINE nano by input size (4 threads): 320 px 3.2 FPS (contended run), 480 px 7.9 FPS, 640 px 5.7 FPS. More threads
-(8) was slower under contention. Timing noise is large; the build script reports median and spread over many frames.
+**Speed.** My first quick runs on a busy CPU ranked the models in the order D-FINE nano, D-FINE small, RT-DETR r18vd (fastest
+to slowest) and put YOLOS-tiny, RT-DETRv2 and DETR R50 behind them. The numbers I quote now come only from
+`visionlens bench` (see the README), with the load stated; this file does not repeat any.
 
 **Choice:** D-FINE nano default (smallest, fastest, Apache-2.0, 15 MB), D-FINE small as the "accurate" option, RT-DETR
 r18vd as a reference row in the comparison table. Detection runs every Nth frame (stride); tracker prediction covers
-the gaps, so a ~6 FPS detector can drive smooth 25 FPS output, which also shows why a tracker is needed.
+the gaps, so a detector that only manages a few frames per second can still drive a smoother overlay, which is why a tracker is
+needed.
 
 Sanity check on real footage [measured]: D-FINE nano on the CC0 pedestrian clip (1920x1080) finds persons, bicycles,
 bags and a stop sign sensibly, but gives nested near-duplicate boxes on heavily occluded people and some
@@ -72,8 +63,8 @@ Ground truth:
 - **Synthetic sequences with exact ground truth, rendered by me** (primary): agents on linear, curved and crossing
   paths, static occluders, entering/leaving, scripted near-collisions. Two configurations: (a) oracle detections with
   injected noise (jitter, misses, false positives, score noise) to isolate tracker quality across a noise sweep;
-  (b) real detector on rendered frames, reported only if it fires on the rendered silhouettes (otherwise reported as
-  not meaningful rather than forced).
+  (b) a real detector on rendered frames, which I did not run: the rendered silhouettes are not natural images, so
+  it would not be meaningful.
 - Real footage has no ground truth: only descriptive statistics (track count, mean track length), labelled as not an
   accuracy measure.
 
@@ -85,13 +76,14 @@ Ground truth:
 2. **Language:** a deterministic **template describer** is baseline and fallback. An optional **small local LLM**
    rewrites the event list into fluent text, constrained to the supplied facts.
 
-LLM candidates (Apache-2.0), same prompt [measured, contended]: Qwen2.5-0.5B-Instruct (988 MB, 4.6 tok/s) and
-SmolLM2-360M-Instruct (724 MB, 4.6 tok/s). Both stayed faithful to a 4-event test prompt, mostly paraphrasing. At ~5
-tok/s an 80-token paragraph takes ~15 s, so generation runs once per clip in a worker thread and is streamed, while
-the template text shows instantly. Qwen2.5-1.5B (3 GB) is too large/slow for the budget.
+LLM candidates (Apache-2.0): Qwen2.5-0.5B-Instruct, SmolLM2-360M-Instruct and Qwen2.5-1.5B-Instruct. I built the rewrite
+around the Qwen2.5 models and compared the 0.5B and 1.5B ones on the same facts (the results are in the README: guard
+acceptance and seconds per rewrite). Generation runs once per clip in a worker thread and is streamed, while the
+template text shows instantly.
 
-Faithfulness guard: after generation, verify every track id and count mentioned exists in the event list; otherwise fall
-back to the template and flag it in the UI.
+Faithfulness guard: after generation, check the text sentence by sentence against the event list (objects, counts, times,
+directions, event verbs); otherwise fall back to the template and flag it in the UI. The rules are in
+`src/visionlens/describe/guard.py`.
 
 **Optional scene captioner:** SmolVLM-256M-Instruct (Apache-2.0, 513 MB) or Florence-2-base (MIT, 463 MB in the
 `florence-community` native conversion). Moondream2 is Apache-2.0 on the hub (one source suggested BSL; check card) but
@@ -120,11 +112,11 @@ does decode, resize, CFR transcoding, synthetic rendering and an `annotate` CLI 
 ## 6. Sample data (licence-clean)
 
 Wikimedia Commons files marked CC0 (checked through the Commons API licence field):
-- "Video Codec Test pedestrian area 1080p25" (Taurus Media Technik, CC0): 15 s, 375 frames, 1920x1080, real people and
-  bicycles. **Downloaded and run through the detector.** Will be cut to ~10 s at 640 px wide; committed if small
-  (about 3 MB or less), else fetched by `scripts/fetch_samples.py`.
-- Further candidates, to verify in the build: "DiagonalCrosswalkYongeDundas" (CC0, 56 s, busy crosswalk, 73 MB
-  source, so fetched and trimmed by script), "Airport moving walkway" (CC0, 20 s).
+- Candidates I looked at first: "Video Codec Test pedestrian area 1080p25" (Taurus Media Technik, CC0, 15 s, 1920x1080,
+  people and bicycles) and "DiagonalCrosswalkYongeDundas" (CC0, busy crosswalk, a 73 MB source). I did not ship them:
+  I preferred wide shots in which individual people cannot be recognised.
+- Shipped instead: two wide fixed-camera shots, one with distant pedestrians and one without people (credits in
+  `data/samples.json` and the README), cut to short excerpts by `scripts/fetch_samples.py`.
 - Generated clips from my scene generator, with ground truth, committed (small).
 - Attribution is kept in `data/samples.json` and the README even though CC0 does not require it. Wikimedia throttles bare downloads
   (HTTP 429): the fetch script sends a descriptive User-Agent and retries.

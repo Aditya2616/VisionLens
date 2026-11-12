@@ -182,6 +182,7 @@ export class Overlay {
     const { ctx } = this;
     const items = [];
     this.hit = [];
+    this.animating = false;
     for (const t of fr.tracks) {
       const [x1, y1, x2, y2] = t.box;
       const cx = ((x1 + x2) / 2) * sx;
@@ -192,6 +193,7 @@ export class Overlay {
       }
       const born = now - this.revealed.get(t.id);
       const e = reduced() ? 1 : easeOut(born / 380);
+      if (born < 400) this.animating = true; // keep redrawing until the box has finished appearing
       const X1 = x1 * sx, Y1 = y1 * sy, X2 = x2 * sx, Y2 = y2 * sy;
       const pad = lerp(10 * k, 0, e);
       const bx = X1 - pad, by = Y1 - pad, bw = X2 - X1 + pad * 2, bh = Y2 - Y1 + pad * 2;

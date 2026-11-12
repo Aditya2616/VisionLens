@@ -73,3 +73,25 @@ def test_make_describer_names():
 def test_noise_config_levels_are_ordered():
     p = [NoiseConfig.level(k) for k in range(4)]
     assert p[0].p_miss == 0 and p[3].p_miss > p[1].p_miss
+
+
+def test_still_image_reports_only_confident_detections():
+    import numpy as np
+
+    from visionlens.pipeline import analyze_image
+    from visionlens.schemas import Detection
+
+    class Fake:
+        name = "fake"
+
+        def detect(self, frame, index=0):
+            return [
+                Detection(box=(10, 10, 50, 90), score=0.9, cls="car"),
+                Detection(box=(60, 10, 90, 90), score=0.2, cls="person"),  # below the floor
+            ]
+
+    res = analyze_image(Fake(), np.zeros((100, 120, 3), np.uint8))
+    assert res.summary == {"tracks": 1, "by_class": {"car": 1}, "peak": 1}
+    assert [t.cls for t in res.frames[0].tracks] == ["car"]
+    assert len(res.frames[0].dets) == 2  # the raw boxes are still there for the raw layer
+    assert "person" not in res.description.template.text

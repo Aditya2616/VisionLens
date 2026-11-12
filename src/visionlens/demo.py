@@ -181,7 +181,7 @@ def record_demo(
                 "cpu": cpu_name(),
                 "threads": n_threads,
                 "device": f"{det.device}" + (f" ({gpu_name()})" if det.device == "cuda" else ""),
-                "llm_dtype": getattr(llm, "dtype", None),
+                "llm_dtype": getattr(llm, "dtype", None) or old.get("llm_dtype"),
                 "detector": detector,
                 "stride": stride,
                 "note": machine_note,

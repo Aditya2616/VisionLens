@@ -1,18 +1,36 @@
-"""Refresh the measured numbers in README.md from results/results.json.
+"""Keep the numbers in README.md identical to the files they come from.
 
     visionlens bench --out results/results.json     # measure (one command)
-    python scripts/update_readme.py                  # rewrite the tables in the README
+    python scripts/update_readme.py                  # rewrite the generated blocks of the README
+    python scripts/update_readme.py --check          # exit 1 if the README is out of date (also a test)
 
-Only the blocks between `<!-- RESULTS:name:start -->` and `<!-- RESULTS:name:end -->` change.
+Every number the README quotes lives between `<!-- RESULTS:name:start -->` and
+`<!-- RESULTS:name:end -->` markers and is generated from one of:
+
+- results/results.json            the benchmark run (tables, load, tracker and rewrite figures)
+- data/facts.json                 model licences, parameters, download sizes, published AP
+                                  (written by scripts/fetch_facts.py)
+- data/samples.json               the sample-clip credits
+- docs/demo/index.json + <clip>.json   the recorded demo the web page replays
+- the code (api.Settings limits, the cli fetch-models list)
+
+`--check` fails when a marker is missing, when a block differs from what the sources say, or when
+a block's source is absent. tests/test_readme_facts.py runs it and adds checks for the facts that
+sit in the prose (commands, flags, versions, file names).
 """
 
 from __future__ import annotations
 
+import difflib
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+LICENCE_NAMES = {"apache-2.0": "Apache-2.0", "mit": "MIT"}
 
 
 def table(headers: list[str], rows: list[list]) -> str:
@@ -21,53 +39,135 @@ def table(headers: list[str], rows: list[list]) -> str:
     return "\n".join(out)
 
 
-def blocks(res: dict) -> dict[str, str]:
-    m = res["machine"]
-    out: dict[str, str] = {}
-    out["machine"] = (
-        f"Measured on {m['cpu']} ({m['logical_cores']} logical cores; {m['threads_used']} threads used), "
-        f"PyTorch {m['torch']} (CPU rows forced to the CPU), transformers {m['transformers']}, OpenCV {m['opencv']}, "
-        f"Python {m['python']}, {m['date']}. Load: {m['load_note'] or 'not recorded'}"
+def size_text(n_bytes: float) -> str:
+    mb = n_bytes / 1e6
+    return f"{mb / 1000:.1f} GB" if mb >= 995 else f"{mb:.0f} MB"
+
+
+def _busy(lo: dict, group: str, key: str) -> tuple[float, float] | None:
+    v = lo.get(group) or {}
+    a = (v.get("before") or {}).get(key)
+    b = (v.get("after") or {}).get(key)
+    return None if a is None or b is None else (a, b)
+
+
+def cpu_busy_text(lo: dict, group: str) -> str:
+    ab = _busy(lo, group, "cpu_busy_percent")
+    if not ab:
+        return "CPU load not recorded for this group"
+    return (
+        f"measured with the CPU about {sum(ab) / 2:.0f}% busy with other work "
+        f"(sampled {ab[0]:.0f}% before, {ab[1]:.0f}% after); an idle machine will be faster"
     )
+
+
+def gpu_busy_text(lo: dict, group: str) -> str:
+    ab = _busy(lo, group, "gpu_busy_percent")
+    if not ab:
+        return "GPU load not recorded"
+    return f"GPU about {sum(ab) / 2:.0f}% busy with other work"
+
+
+def _category(why: str) -> str:
+    if "count" in why or why.startswith("number"):
+        return "wrong or invented count"
+    if "disagrees" in why:
+        return "direction contradicts the events"
+    if "not a tracked object" in why:
+        return "object that was not tracked"
+    if why.startswith("time") or "duration" in why:
+        return "time or duration not in the events"
+    if why.startswith("claims"):
+        return "event verb not supported by the events"
+    return why
+
+
+def best_model(res: dict) -> dict:
+    """The rewrite model chosen by evidence: highest guard acceptance, ties broken by CPU time."""
+    models = res["describer"]["models"]
+    return max(
+        models,
+        key=lambda m: (m["acceptance_rate"], -(m.get("cpu") or {}).get("mean_seconds", 1e9)),
+    )
+
+
+def blocks(root: Path = ROOT) -> dict[str, str]:
+    res = json.loads((root / "results" / "results.json").read_text("utf-8"))
+    facts = json.loads((root / "data" / "facts.json").read_text("utf-8"))
+    samples = json.loads((root / "data" / "samples.json").read_text("utf-8"))
+    index = json.loads((root / "docs" / "demo" / "index.json").read_text("utf-8"))
+    m = res["machine"]
     lo = res.get("load_observed", {})
+    out: dict[str, str] = {}
 
-    def busy(group: str) -> str:
-        v = lo.get(group) or {}
-        a = (v.get("before") or {}).get("cpu_busy_percent")
-        b = (v.get("after") or {}).get("cpu_busy_percent")
-        if a is None or b is None:
-            return "CPU load not recorded for this group"
-        return (
-            f"measured with the CPU about {(a + b) / 2:.0f}% busy with other work "
-            f"(sampled {a:.0f}% before, {b:.0f}% after); an idle machine will be faster"
+    out["machine"] = (
+        f"{m['cpu']}, {m['logical_cores']} logical cores ({m['threads_used']} threads used for the CPU rows). "
+        f"PyTorch {m['torch']} (the CPU rows are forced onto the CPU), transformers {m['transformers']}, "
+        f"OpenCV {m['opencv']}, Python {m['python']}. GPU: {m.get('gpu') or 'none'}. Measured on {m['date']}."
+    )
+
+    def fmt(x: dict | None) -> str:
+        x = x or {}
+        bits = []
+        if "cpu_busy_percent" in x:
+            bits.append(f"CPU {x['cpu_busy_percent']:.0f}% busy")
+        if "gpu_busy_percent" in x:
+            bits.append(
+                f"GPU {x['gpu_busy_percent']}% busy, {x['gpu_mem_used_mb']} of "
+                f"{x['gpu_mem_total_mb']} MB of its memory in use"
+            )
+        return ", ".join(bits) or "not recorded"
+
+    out["load"] = table(
+        ["Group", "Before", "After"],
+        [[g, fmt(v.get("before")), fmt(v.get("after"))] for g, v in lo.items()],
+    )
+
+    # ------------------------------------------------------------------ models and downloads
+    fm = facts["models"]
+    det_rows = []
+    for key in ("dfine-nano", "dfine-small", "rtdetr-r18"):
+        f = fm[key]
+        det_rows.append(
+            [
+                f"`{f['repo']}`",
+                LICENCE_NAMES.get(f["licence"], f["licence"]),
+                f"{f['params'] / 1e6:.1f}",
+                size_text(f["download_bytes"]),
+                f"{f['published_ap']} ([source]({f['ap_source']}))",
+            ]
         )
-
-    if lo:
-
-        def fmt(x: dict | None) -> str:
-            x = x or {}
-            bits = []
-            if "cpu_busy_percent" in x:
-                bits.append(f"CPU {x['cpu_busy_percent']:.0f}% busy")
-            if "gpu_busy_percent" in x:
-                bits.append(
-                    f"GPU {x['gpu_busy_percent']}% busy, {x['gpu_mem_used_mb']} of {x['gpu_mem_total_mb']} MB used"
-                )
-            return ", ".join(bits) or "not recorded"
-
-        out["load"] = "; ".join(
-            f"{g}: {fmt(v.get('before'))} before, {fmt(v.get('after'))} after"
-            for g, v in lo.items()
+    for key in ("qwen-0.5b", "qwen-1.5b"):
+        f = fm[key]
+        det_rows.append(
+            [
+                f"`{f['repo']}`",
+                LICENCE_NAMES.get(f["licence"], f["licence"]),
+                f"{f['params'] / 1e6:.0f}",
+                size_text(f["download_bytes"]),
+                "n/a",
+            ]
         )
+    out["models"] = (
+        table(
+            ["Hub id", "Licence", "Parameters (M)", "Download", "Published COCO AP (val)"],
+            det_rows,
+        )
+        + f"\n\nLicence, parameters and download size are read from the Hugging Face hub on {facts['fetched_on']} "
+        "(`scripts/fetch_facts.py`). The AP figures are quoted from the sources linked, not measured here."
+    )
+    nano = fm["dfine-nano"]["download_bytes"]
+    llm = fm["qwen-0.5b"]["download_bytes"]
+    everything = sum(
+        fm[k]["download_bytes"] for k in ("dfine-nano", "dfine-small", "rtdetr-r18", "qwen-0.5b")
+    )
+    out["downloads"] = (
+        f"`visionlens fetch-models` downloads the default detector ({size_text(nano)}). "
+        f"`--llm` also downloads the optional rewrite model, Qwen2.5-0.5B-Instruct ({size_text(llm)}), and "
+        f"`--all` fetches both comparison detectors as well ({size_text(everything)} in total)."
+    )
 
-    def gpu_busy(group: str) -> str:
-        v = lo.get(group) or {}
-        a = (v.get("before") or {}).get("gpu_busy_percent")
-        b = (v.get("after") or {}).get("gpu_busy_percent")
-        if a is None or b is None:
-            return "GPU load not recorded"
-        return f"GPU about {(a + b) / 2:.0f}% busy with other work"
-
+    # ------------------------------------------------------------------ detector speed
     if "detectors" in res:
         gpu = {(d["model"], d["input_size"]): d for d in res.get("detectors_gpu", [])}
         rows = []
@@ -77,7 +177,7 @@ def blocks(res: dict) -> dict[str, str]:
                 [
                     d["model"],
                     d["input_size"],
-                    d["params_m"],
+                    f"{fm[d['model']]['params'] / 1e6:.1f}",
                     d["ms_median"],
                     d["ms_p95"],
                     d["fps_median"],
@@ -85,6 +185,7 @@ def blocks(res: dict) -> dict[str, str]:
                     d["detections_per_frame"],
                 ]
             )
+        w, h = res["pipeline"]["resolution"].split("x")
         out["detectors"] = (
             table(
                 [
@@ -100,8 +201,11 @@ def blocks(res: dict) -> dict[str, str]:
                 rows,
             )
             + "\n\n"
-            + f"One detector call on a 480x270 frame (resized to the input size), batch 1, {res['detectors'][0]['frames']} frames, per-call time includes pre- and post-processing. "
-            f"CPU columns: {res['machine']['threads_used']} threads, float32, {busy('detectors')}. GPU column: {res['machine'].get('gpu') or 'n/a'}, float32, {gpu_busy('detectors')}."
+            + f"One detector call on a {w}x{h} frame of the intersection clip (resized to the input size), "
+            f"batch 1, {res['detectors'][0]['frames']} frames, per-call time includes pre- and "
+            f"post-processing. CPU columns: {m['threads_used']} threads, float32, "
+            f"{cpu_busy_text(lo, 'detectors')}. GPU column: {m.get('gpu') or 'n/a'}, float32, "
+            f"{gpu_busy_text(lo, 'detectors')}."
         )
     if "pipeline" in res:
         prow = []
@@ -123,8 +227,8 @@ def blocks(res: dict) -> dict[str, str]:
                 ]
             )
         out["pipeline"] = (
-            f"CPU row: {res['machine']['threads_used']} threads, {busy('pipeline')}. "
-            f"GPU row: float32 detector, {gpu_busy('pipeline')}.\n\n"
+            f"CPU row: {m['threads_used']} threads, {cpu_busy_text(lo, 'pipeline')}. "
+            f"GPU row: float32 detector, {gpu_busy_text(lo, 'pipeline')}.\n\n"
         ) + table(
             [
                 "Detector on",
@@ -140,6 +244,8 @@ def blocks(res: dict) -> dict[str, str]:
             ],
             prow,
         )
+
+    # ------------------------------------------------------------------ tracking
     if "tracker" in res:
         t = res["tracker"]
         keys = ["MOTA", "IDF1", "HOTA", "DetA", "AssA", "IDsw"]
@@ -147,7 +253,17 @@ def blocks(res: dict) -> dict[str, str]:
             f"{len(t['scenes'])} scene types x {t['seeds']} seeds, {t['seconds_per_scene']:.0f} s at "
             f"{t['fps']:.0f} fps, {t['gt_boxes_total']} ground-truth boxes in total. "
             "Detections are the exact ground truth plus injected noise (see `NoiseConfig`); "
-            "these are **synthetic-scene results, not MOT-benchmark results**."
+            "these are **synthetic-scene results, not MOT-benchmark results**. IDsw is the mean number of "
+            "identity switches per scene."
+        )
+        ours = next(r for r in t["ablation"] if r["variant"].startswith("ByteTrack-style"))
+        naive = next(r for r in t["ablation"] if r["variant"].startswith("naive"))
+        single = next(r for r in t["ablation"] if r["variant"].startswith("no low-score"))
+        out["tracker_headline"] = (
+            f"At noise level {ours['level']} and detector stride {ours['stride']} the tracker scores IDF1 "
+            f"{ours['IDF1']} and HOTA {ours['HOTA']}, against IDF1 {naive['IDF1']} and HOTA {naive['HOTA']} "
+            f"for the naive per-frame IoU baseline ({ours['IDsw']} identity switches per scene against "
+            f"{naive['IDsw']}). Without the low-score second pass it scores IDF1 {single['IDF1']}."
         )
         out["noise_sweep"] = table(
             ["Noise level", "Stride"] + keys,
@@ -165,17 +281,21 @@ def blocks(res: dict) -> dict[str, str]:
             ["Scene", "Noise level", "Stride"] + keys,
             [[r["scene"], r["level"], r["stride"]] + [r[k] for k in keys] for r in t["per_scene"]],
         )
+
+    # ------------------------------------------------------------------ rewrite and guard
     if "describer" in res:
         d = res["describer"]
+        n_syn = sum(1 for c in d["cases"] if c.startswith("synthetic-"))
+        n_rec = sum(1 for c in d["cases"] if c.startswith("recorded-"))
         rows = []
-        for m in d["models"]:
-            cpu = m.get("cpu")
-            load = (cpu or {}).get("load", {}).get("cpu_busy_percent")
+        for mod in d["models"]:
+            cpu = mod.get("cpu")
+            load = ((cpu or {}).get("load") or {}).get("cpu_busy_percent")
             rows.append(
                 [
-                    m["model"],
-                    f"{m['accepted']} / {m['cases']} ({m['acceptance_rate']:.0%})",
-                    f"{m['mean_seconds']} s ({m['device']}, {m['dtype']})",
+                    mod["model"],
+                    f"{mod['accepted']} / {mod['cases']} ({mod['acceptance_rate']:.0%})",
+                    f"{mod['mean_seconds']} s ({mod['device']}, {mod['dtype']})",
                     f"{cpu['mean_seconds']} s ({cpu['device']}, {cpu['dtype']}, {cpu['cases']} cases, "
                     f"CPU {load}% busy)"
                     if cpu
@@ -183,8 +303,9 @@ def blocks(res: dict) -> dict[str, str]:
                 ]
             )
         out["describer"] = (
-            f"{len(d['cases'])} cases: all 12 synthetic scenes (4 types x 3 seeds, simulated detector) "
-            "plus the 3 recorded clips, rewritten from the grouped template facts with greedy decoding.\n\n"
+            f"{len(d['cases'])} cases: {n_syn} synthetic scenes (every scene type x 3 seeds, simulated "
+            f"detector) and the {n_rec} recorded clips, rewritten from the grouped template facts with "
+            "greedy decoding.\n\n"
             + table(
                 [
                     "Model",
@@ -196,46 +317,141 @@ def blocks(res: dict) -> dict[str, str]:
             )
         )
         reasons: dict[str, int] = {}
-
-        def category(why: str) -> str:
-            if "count" in why or why.startswith("number"):
-                return "wrong or invented count"
-            if "disagrees" in why:
-                return "direction contradicts the events"
-            if "not a tracked object" in why:
-                return "object that was not tracked"
-            if why.startswith("time") or "duration" in why:
-                return "time or duration not in the events"
-            if why.startswith("claims"):
-                return "event verb not supported by the events"
-            return why
-
-        for m in d["models"]:
-            for r in m["rows"]:
+        for mod in d["models"]:
+            for r in mod["rows"]:
                 if not r["accepted"]:
-                    key = category(r["reason"] or "")
+                    key = _category(r["reason"] or "")
                     reasons[key] = reasons.get(key, 0) + 1
         out["describer_reasons"] = ", ".join(
             f"{n} x {k}" for k, n in sorted(reasons.items(), key=lambda kv: -kv[1])
         )
+        win = best_model(res)
+        lose = [x for x in d["models"] if x is not win]
+        other = lose[0] if lose else None
+        sentence = (
+            f"**Choice by evidence.** `{win['model']}` is the model for the rewrite: the guard accepted "
+            f"{win['accepted']} of {win['cases']} of its rewrites"
+        )
+        if other:
+            sentence += (
+                f" against {other['accepted']} of {other['cases']} for `{other['model']}`, and its mean CPU "
+                f"time was {win['cpu']['mean_seconds']} s against {other['cpu']['mean_seconds']} s"
+                if win.get("cpu") and other.get("cpu")
+                else f" against {other['accepted']} of {other['cases']} for `{other['model']}`"
+            )
+        out["describer_choice"] = sentence + "."
+
+    # ------------------------------------------------------------------ recorded demo
+    rows = []
+    for clip in index["clips"]:
+        r = json.loads((root / "docs" / "demo" / clip["json"]).read_text("utf-8"))
+        meta, tm, ds = r["meta"], r["timings"], r.get("description") or {}
+        model = ds.get("model")
+        if model is None:
+            rewrite = "none"
+        elif model["accepted"]:
+            rewrite = "accepted"
+        else:
+            rewrite = f"rejected ({model['rejected_reason']}), template shown"
+        where = {"cuda": "GPU", "cpu": "CPU"}.get(tm.get("device", ""), "simulated detector")
+        files = [root / "docs" / "demo" / clip["json"], root / "docs" / "demo" / clip["video"]]
+        size = sum(f.stat().st_size for f in files)
+        rows.append(
+            [
+                clip["label"],
+                "image"
+                if meta["kind"] == "image"
+                else f"{meta['n_frames']} frames, {meta['duration']:.0f} s",
+                r["summary"].get("tracks", 0) if meta["kind"] == "video" else "n/a",
+                len(r["events"]) if meta["kind"] == "video" else "n/a",
+                f"{tm['detect_ms_mean']} ms ({where})",
+                rewrite,
+                f"{size / 1e6:.2f} MB",
+            ]
+        )
+    out["demo"] = (
+        f"Recorded on {index['recorded_on']} with {index['detector']} at stride {index['stride']}; "
+        f"detector device: {index['device']}"
+        + (f", language model in {index['llm_dtype']}" if index.get("llm_dtype") else "")
+        + ".\n\n"
+        + table(
+            [
+                "Clip",
+                "Length",
+                "Tracks",
+                "Events",
+                "Detect, mean per call",
+                "Model rewrite",
+                "Video + JSON",
+            ],
+            rows,
+        )
+    )
+
+    # ------------------------------------------------------------------ limits and credits
+    from visionlens.api import Settings
+
+    s = Settings()
+    out["limits"] = (
+        f"Uploads are capped at {s.max_upload_mb} MB; only the first {s.max_seconds:.0f} s are analysed, "
+        f"at up to {s.max_width} px wide. They are written to a temporary folder and deleted when processing ends."
+    )
+    lines = []
+    for sm in samples.values():
+        src = sm["source"]
+        lines.append(
+            f"  - {sm['label']}: [{src['title']}]({src['page']}) by {src['author']}, {src['license']}; "
+            f"an excerpt of {src['seconds']:.0f} s starting at {src['trimmed_from'].rstrip('s')} s, resized to "
+            f"{sm['width']} px wide and re-encoded as VP9 WebM."
+        )
+    out["credits"] = "\n".join(lines)
     return out
 
 
-def main() -> None:
-    res = json.loads((ROOT / "results" / "results.json").read_text("utf-8"))
-    path = ROOT / "README.md"
-    text = path.read_text("utf-8")
-    for name, body in blocks(res).items():
+def render(text: str, generated: dict[str, str]) -> tuple[str, list[str]]:
+    problems: list[str] = []
+    for name, body in generated.items():
         pat = re.compile(
             rf"(<!-- RESULTS:{name}:start -->)(.*?)(<!-- RESULTS:{name}:end -->)", re.S
         )
         if not pat.search(text):
-            print("no marker for", name)
+            problems.append(f"README has no marker for '{name}'")
             continue
-        text = pat.sub(lambda m, b=body: f"{m.group(1)}\n{b}\n{m.group(3)}", text)
-    path.write_text(text, "utf-8")
+        text = pat.sub(lambda mm, b=body: f"{mm.group(1)}\n{b}\n{mm.group(3)}", text)
+    used = set(re.findall(r"<!-- RESULTS:(\w+):start -->", text))
+    for name in sorted(used - set(generated)):
+        problems.append(f"README marker '{name}' has no generator")
+    return text, problems
+
+
+def check(root: Path = ROOT) -> list[str]:
+    """Problems that make the README disagree with its sources (empty when it is in sync)."""
+    path = root / "README.md"
+    current = path.read_text("utf-8")
+    new, problems = render(current, blocks(root))
+    if new != current:
+        diff = difflib.unified_diff(
+            current.splitlines(), new.splitlines(), "README.md", "regenerated", lineterm="", n=0
+        )
+        problems.append("README.md is out of date:\n" + "\n".join(list(diff)[:40]))
+    return problems
+
+
+def main() -> int:
+    if "--check" in sys.argv:
+        problems = check()
+        for p in problems:
+            print("PROBLEM:", p)
+        print("README is in sync" if not problems else f"{len(problems)} problem(s)")
+        return 1 if problems else 0
+    path = ROOT / "README.md"
+    new, problems = render(path.read_text("utf-8"), blocks())
+    for p in problems:
+        print("PROBLEM:", p)
+    path.write_text(new, "utf-8")
     print("README updated")
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

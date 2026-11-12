@@ -11,9 +11,11 @@ import numpy as np
 from .describe import Describer, Facts, TemplateDescriber, build_description, describe_image
 from .detect.base import Detector
 from .events import EventConfig, extract_events, summarize
-from .schemas import Description, FrameResult, Meta, Result, Timings
+from .schemas import Description, FrameResult, Meta, Result, Timings, TrackOut
 from .sysutil import cpu_name
 from .track import ByteTracker, TrackerConfig
+
+STILL_CONFIDENCE = TrackerConfig().high_thr  # a still image reports confident detections only
 
 
 @dataclass
@@ -132,14 +134,18 @@ class Pipeline:
 
 def analyze_image(detector: Detector, image: np.ndarray, name: str = "image") -> Result:
     """Still image: detection plus a counts-and-positions description. No tracking."""
+    detector.detect(image, 0)  # warm-up, so the reported time is a steady-state call
     t0 = time.perf_counter()
     dets = detector.detect(image, 0)
     ms = (time.perf_counter() - t0) * 1000
     h, w = image.shape[:2]
-    variant = describe_image(dets, w)
+    # Only confident detections are reported (the tracker's "high score" threshold); the raw
+    # low-score boxes stay in `dets` for the raw-detections layer.
+    sure = [d for d in dets if d.score >= STILL_CONFIDENCE]
+    variant = describe_image(sure, w)
     from collections import Counter
 
-    by_class = dict(Counter(d.cls for d in dets))
+    by_class = dict(Counter(d.cls for d in sure))
     meta = Meta(
         name=name,
         kind="image",
@@ -156,7 +162,16 @@ def analyze_image(detector: Detector, image: np.ndarray, name: str = "image") ->
         i=0,
         t=0.0,
         dets=[d.model_copy(update={"box": tuple(round(v, 1) for v in d.box)}) for d in dets],
-        tracks=[],
+        tracks=[
+            TrackOut(
+                id=k + 1,
+                box=tuple(round(v, 1) for v in d.box),
+                cls=d.cls,
+                score=d.score,
+                detected=True,
+            )
+            for k, d in enumerate(sure)
+        ],
     )
     return Result(
         meta=meta,
@@ -171,5 +186,5 @@ def analyze_image(detector: Detector, image: np.ndarray, name: str = "image") ->
             cpu=cpu_name(),
             device=getattr(detector, "device", ""),
         ),
-        summary={"tracks": 0, "by_class": by_class, "peak": len(dets)},
+        summary={"tracks": len(sure), "by_class": by_class, "peak": len(sure)},
     )

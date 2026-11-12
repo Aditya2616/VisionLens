@@ -66,7 +66,7 @@ function setMode() {
     m.querySelector('span').textContent = 'Live · local server';
     $('#live-on').hidden = false;
     const l = state.server.limits;
-    $('#live-limits').textContent = `Up to ${l.max_upload_mb} MB; the first ${l.max_seconds} s are analysed at ${l.max_width}px wide. Clips run one at a time.`;
+    $('#live-limits').textContent = `Up to ${l.max_upload_mb} MB; the first ${l.max_seconds} s are analysed at up to ${l.max_width} px wide. Clips run one at a time.`;
   } else {
     m.className = 'mode mono rec';
     m.querySelector('span').textContent = `Recorded run · ${idx.recorded_on}`;
@@ -363,7 +363,7 @@ function frame(now) {
   if (!p || !state.visible) return;
   const t = p.time;
   const scanning = !!overlay.scan;
-  if (t !== state.lastT || scanning || !p.paused) {
+  if (t !== state.lastT || scanning || !p.paused || overlay.animating) {
     overlay.draw(t, state.layers, now);
     timeline.draw(t);
     syncScrub();
