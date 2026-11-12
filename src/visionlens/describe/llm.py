@@ -7,6 +7,7 @@ import threading
 import time
 
 from ..schemas import DescriptionVariant
+from ..sysutil import resolve_device
 from .base import Facts, TokenCallback
 
 DEFAULT_LLM = "Qwen/Qwen2.5-0.5B-Instruct"
@@ -39,9 +40,13 @@ def trim_to_sentence(text: str) -> str:
 class LocalLLMDescriber:
     name = "llm"
 
-    def __init__(self, model_id: str | None = None, max_new_tokens: int = 160) -> None:
+    def __init__(
+        self, model_id: str | None = None, max_new_tokens: int = 160, device: str | None = None
+    ) -> None:
         self.model_id = model_id or os.environ.get("VISIONLENS_LLM", DEFAULT_LLM)
         self.max_new_tokens = max_new_tokens
+        self.device = resolve_device(device)
+        self.dtype = "float16" if self.device == "cuda" else "float32"
         self._tok = None
         self._model = None
 
@@ -52,9 +57,18 @@ class LocalLLMDescriber:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self._tok = AutoTokenizer.from_pretrained(self.model_id)
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, dtype=torch.float32
-        ).eval()
+        dtype = torch.float16 if self.device == "cuda" else torch.float32
+        try:
+            self._model = (
+                AutoModelForCausalLM.from_pretrained(self.model_id, dtype=dtype)
+                .eval()
+                .to(self.device)
+            )
+        except RuntimeError:  # CUDA out of memory: fall back to the CPU
+            self.device, self.dtype = "cpu", "float32"
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_id, dtype=torch.float32
+            ).eval()
 
     def describe(self, facts: Facts, on_token: TokenCallback | None = None) -> DescriptionVariant:
         import torch
@@ -65,7 +79,7 @@ class LocalLLMDescriber:
         t0 = time.perf_counter()
         inputs = self._tok.apply_chat_template(
             build_prompt(facts), add_generation_prompt=True, return_tensors="pt", return_dict=True
-        )
+        ).to(self.device)
         streamer = TextIteratorStreamer(self._tok, skip_prompt=True, skip_special_tokens=True)
 
         def run() -> None:

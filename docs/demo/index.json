@@ -1,10 +1,12 @@
 {
   "recorded_on": "2026-11-12",
   "cpu": "AMD Ryzen 5 8500G w/ Radeon 740M Graphics",
-  "threads": 3,
+  "threads": 2,
+  "device": "cuda (NVIDIA GeForce RTX 5060 Ti)",
+  "llm_dtype": "float16",
   "detector": "dfine-nano",
   "stride": 2,
-  "note": "recorded while other jobs were using the CPU",
+  "note": "detector and language model ran on the GPU; the CPU was busy with other jobs",
   "clips": [
     {
       "id": "intersection",

@@ -101,28 +101,33 @@ webcam starts only after an explicit tap; frames are processed on your machine a
 Every number here comes from one command, `visionlens bench --out results/results.json`, and
 `python scripts/update_readme.py` writes the tables below from that file.
 
+**Devices.** The pipeline picks CUDA if PyTorch can see a GPU and the CPU otherwise (`--device cpu|cuda|auto`, or
+`VISIONLENS_DEVICE`); the quickstart and the tests are CPU. The CPU columns below are the CPU claim: a dedicated CPU
+run with the thread count shown. The GPU columns are a second, labelled measurement (float32 detector, float16
+language model). The static demo was recorded with the detector and the model on the GPU, so its stage timings are GPU
+timings (the page says so in the badge tooltip).
+
 **Machine.**
 <!-- RESULTS:machine:start -->
-Measured on AMD Ryzen 5 8500G w/ Radeon 740M Graphics (12 logical cores; 3 threads used), CPU-only PyTorch 2.11.0+cpu, transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15, 2026-11-12. Machine state: Measured on a shared workstation while several other jobs (model training and evaluation from other projects) were running on the same CPU; treat timings as pessimistic and re-run on a quiet machine..
+Measured on AMD Ryzen 5 8500G w/ Radeon 740M Graphics (12 logical cores; 3 threads used), PyTorch 2.11.0+cu128 (CPU rows forced to the CPU), transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15, 2026-11-12. Load: CPU rows: 3 threads, measured on a shared workstation whose CPU was saturated by other jobs (model training and evaluation), so they are pessimistic. GPU rows: RTX 5060 Ti, float32 detector, float16 language model, 2-3 CPU threads for pre- and post-processing; the GPU was shared with other jobs.
 <!-- RESULTS:machine:end -->
 
 ### Detector speed
 
 <!-- RESULTS:detectors:start -->
-| Detector | Input px | Params (M) | Median ms | p95 ms | FPS | Dets/frame |
-|---|---|---|---|---|---|---|
-| dfine-nano | 640 | 3.8 | 9430.4 | 12574.2 | 0.11 | 44.51 |
-| dfine-nano | 480 | 3.8 | 2690.0 | 3368.8 | 0.37 | 42.11 |
-| dfine-nano | 320 | 3.8 | 2247.6 | 2595.8 | 0.44 | 26.68 |
-| dfine-small | 640 | 10.3 | 4136.8 | 9717.2 | 0.24 | 47.16 |
-| rtdetr-r18 | 640 | 20.2 | 3414.3 | 7601.2 | 0.29 | 29.89 |
+| Detector | Input px | Params (M) | CPU median ms | CPU p95 ms | CPU FPS | GPU median ms / FPS | Dets/frame |
+|---|---|---|---|---|---|---|---|
+| dfine-nano | 640 | 3.8 | 257.2 | 516.8 | 3.89 | 68.5 ms / 14.6 | 44.51 |
+| dfine-nano | 480 | 3.8 | 203.1 | 427.2 | 4.92 | 62.4 ms / 16.04 | 42.11 |
+| dfine-nano | 320 | 3.8 | 120.3 | 174.0 | 8.31 | 49.7 ms / 20.1 | 26.68 |
+| dfine-small | 640 | 10.3 | 493.3 | 561.4 | 2.03 | 73.7 ms / 13.58 | 47.16 |
+| rtdetr-r18 | 640 | 20.2 | 657.2 | 759.5 | 1.52 | 52.4 ms / 19.07 | 29.89 |
 
-One detector call on a 480x270 frame (resized to the input size), batch 1, 37 frames, per-call time includes pre- and post-processing.
+One detector call on a 480x270 frame (resized to the input size), batch 1, 37 frames, per-call time includes pre- and post-processing. CPU columns: 3 threads, float32. GPU column: NVIDIA GeForce RTX 5060 Ti, float32.
 <!-- RESULTS:detectors:end -->
 
-The machine was saturated by other jobs while this ran, so the rows were measured under different, unknown amounts
-of contention (the 640 px nano row in particular is inflated, since it ran first). Compare models and sizes only
-roughly, and read the absolute values as worst cases. Rerun `visionlens bench` on an idle machine for clean timings.
+Other jobs were using the CPU during the run and the load changed between rows, so treat the CPU numbers as
+rough (the p95 column shows the spread). Rerun `visionlens bench` on an idle machine for clean timings.
 
 Published COCO AP of these models (D-FINE nano about 42.8, small about 48.5, RT-DETR r18vd about 46.5) is quoted from
 the papers and model cards, not measured here.
@@ -130,9 +135,10 @@ the papers and model cards, not measured here.
 ### End to end, on a real clip
 
 <!-- RESULTS:pipeline:start -->
-| Clip | Frames | Detector | Input | Stride | Detector calls | Detect ms (mean / p95) | Track ms (mean) | End-to-end FPS |
-|---|---|---|---|---|---|---|---|---|
-| intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 545.7 / 1161.5 | 0.719 | 5.34 |
+| Detector on | Clip | Frames | Detector | Input | Stride | Detector calls | Detect ms (mean / p95) | Track ms (mean) | End-to-end FPS |
+|---|---|---|---|---|---|---|---|---|---|
+| CPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 236.6 / 326.8 | 0.513 | 12.3 |
+| GPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 76.1 / 107.6 | 0.499 | 36.45 |
 <!-- RESULTS:pipeline:end -->
 
 ### Tracking quality (synthetic scenes with exact ground truth)
@@ -196,13 +202,13 @@ Per scene (default tracker):
 ### The language-model rewrite and the guard
 
 <!-- RESULTS:describer:start -->
-`Qwen/Qwen2.5-0.5B-Instruct` rewrote the template facts of 8 synthetic scenes (greedy decoding, 46.4 s each on average). The faithfulness guard accepted 8 and rejected 0 (rejection rate 0%). Rejected rewrites fall back to the template text.
+`Qwen/Qwen2.5-0.5B-Instruct` rewrote the template facts of 8 synthetic scenes (greedy decoding, cuda / float16, 7.5 s each on average). The faithfulness guard accepted 8 and rejected 0 (rejection rate 0%). Rejected rewrites fall back to the template text.
 <!-- RESULTS:describer:end -->
 
 The guard is a lexical check (numbers, track ids, object names and counts must all appear in the event list). It
 cannot tell whether a paraphrase flipped a direction or merged two events, and I only read a few of the rewrites
-by eye: in this run they were close copies of the template wording, so the rewrite added fluency at best and cost
-about 45 s per clip on the loaded CPU against none for the template.
+by eye: they were close copies of the template wording, so the rewrite added fluency at best. It cost a few seconds
+per clip on the GPU (float16) and would cost far more on a CPU, against none for the template.
 
 The template is the default describer everywhere (CLI, API, UI) because it is instant, deterministic and cannot
 invent anything. The model rewrite is an option (`--describer llm`, or the dropdown in live mode).
@@ -252,7 +258,8 @@ data/samples.json credits for the sample clips
 - Real footage has no ground truth here, so there is no accuracy number for it. Tracking numbers are synthetic only.
 - The local 0.5 B model is slow on a CPU and often repeats the template's wording; it is a demonstration of the guarded
   rewrite, not a better describer.
-- Timings in this README were measured on a busy shared machine (see above) and are pessimistic.
+- CPU timings in this README were measured while other jobs shared the CPU (see the load note above), so they are
+  pessimistic. GPU timings came from a GPU shared with other jobs.
 - The hosted describers (OpenAI, Anthropic; see `.env.example`) are adapters tested against a stubbed HTTP transport
   only. I have not run them against the real services.
 - Tested paths that ran for real: D-FINE nano, small and RT-DETR r18vd inference, the local Qwen2.5-0.5B rewrite, the

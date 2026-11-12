@@ -24,6 +24,28 @@ def limit_threads(n: int | None = None) -> int:
     return n
 
 
+def resolve_device(pref: str | None = None) -> str:
+    """'cpu', 'cuda' or 'auto'. Order: argument, VISIONLENS_DEVICE, then CUDA if present else CPU."""
+    pref = (pref or os.environ.get("VISIONLENS_DEVICE") or "auto").lower()
+    if pref == "auto":
+        try:
+            import torch
+
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        except Exception:  # noqa: BLE001
+            return "cpu"
+    return pref
+
+
+def gpu_name() -> str | None:
+    try:
+        import torch
+
+        return torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def cpu_name() -> str:
     try:
         if platform.system() == "Windows":

@@ -68,7 +68,7 @@ function setMode() {
   } else {
     m.className = 'mode mono rec';
     m.querySelector('span').textContent = `Recorded run · ${idx.recorded_on}`;
-    m.title = `Recorded on ${idx.cpu}, ${idx.threads} threads. ${idx.note || ''}`;
+    m.title = `Recorded on ${idx.cpu}, ${idx.threads} CPU threads; detector and model on ${idx.device || 'the CPU'}${idx.llm_dtype ? ` (${idx.llm_dtype})` : ''}. ${idx.note || ''}`;
     $('#live-demo').hidden = false;
   }
 }

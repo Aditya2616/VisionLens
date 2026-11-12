@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from ..schemas import Detection
+from ..sysutil import resolve_device
 from .base import nms
 
 MODELS = {
@@ -47,6 +48,7 @@ class HFDetector:
         input_size: int = 640,
         score_floor: float = 0.15,
         classes: frozenset[str] | None = SCENE_CLASSES,
+        device: str | None = None,
     ) -> None:
         import torch  # noqa: F401  (imported here so the module imports without torch)
         from transformers import AutoImageProcessor, AutoModelForObjectDetection
@@ -59,6 +61,12 @@ class HFDetector:
         self.classes = classes
         self.processor = AutoImageProcessor.from_pretrained(self.model_id)
         self.model = AutoModelForObjectDetection.from_pretrained(self.model_id).eval()
+        self.device = resolve_device(device)
+        try:
+            self.model.to(self.device)
+        except RuntimeError:  # e.g. CUDA out of memory: stay on the CPU rather than fail
+            self.device = "cpu"
+            self.model.to("cpu")
 
     def detect(self, frame: np.ndarray | None, index: int = 0) -> list[Detection]:
         import cv2
@@ -70,6 +78,7 @@ class HFDetector:
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         s = self.input_size
         inputs = self.processor(images=image, return_tensors="pt", size={"height": s, "width": s})
+        inputs = inputs.to(self.device)
         with torch.inference_mode():
             outputs = self.model(**inputs)
         res = self.processor.post_process_object_detection(

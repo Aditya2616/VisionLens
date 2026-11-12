@@ -26,45 +26,52 @@ def blocks(res: dict) -> dict[str, str]:
     out: dict[str, str] = {}
     out["machine"] = (
         f"Measured on {m['cpu']} ({m['logical_cores']} logical cores; {m['threads_used']} threads used), "
-        f"CPU-only PyTorch {m['torch']}, transformers {m['transformers']}, OpenCV {m['opencv']}, "
+        f"PyTorch {m['torch']} (CPU rows forced to the CPU), transformers {m['transformers']}, OpenCV {m['opencv']}, "
         f"Python {m['python']}, {m['date']}. Load: {m['load_note'] or 'not recorded'}"
     )
     if "detectors" in res:
-        rows = [
-            [
-                d["model"],
-                d["input_size"],
-                d["params_m"],
-                d["ms_median"],
-                d["ms_p95"],
-                d["fps_median"],
-                d["detections_per_frame"],
-            ]
-            for d in res["detectors"]
-        ]
+        gpu = {(d["model"], d["input_size"]): d for d in res.get("detectors_gpu", [])}
+        rows = []
+        for d in res["detectors"]:
+            g = gpu.get((d["model"], d["input_size"]))
+            rows.append(
+                [
+                    d["model"],
+                    d["input_size"],
+                    d["params_m"],
+                    d["ms_median"],
+                    d["ms_p95"],
+                    d["fps_median"],
+                    f"{g['ms_median']} ms / {g['fps_median']}" if g else "not run",
+                    d["detections_per_frame"],
+                ]
+            )
         out["detectors"] = (
             table(
-                ["Detector", "Input px", "Params (M)", "Median ms", "p95 ms", "FPS", "Dets/frame"],
+                [
+                    "Detector",
+                    "Input px",
+                    "Params (M)",
+                    "CPU median ms",
+                    "CPU p95 ms",
+                    "CPU FPS",
+                    "GPU median ms / FPS",
+                    "Dets/frame",
+                ],
                 rows,
             )
-            + f"\n\nOne detector call on a 480x270 frame (resized to the input size), batch 1, {res['detectors'][0]['frames']} frames, per-call time includes pre- and post-processing."
+            + "\n\n"
+            + f"One detector call on a 480x270 frame (resized to the input size), batch 1, {res['detectors'][0]['frames']} frames, per-call time includes pre- and post-processing. "
+            f"CPU columns: {res['machine']['threads_used']} threads, float32. GPU column: {res['machine'].get('gpu') or 'n/a'}, float32."
         )
     if "pipeline" in res:
-        p = res["pipeline"]
-        out["pipeline"] = table(
-            [
-                "Clip",
-                "Frames",
-                "Detector",
-                "Input",
-                "Stride",
-                "Detector calls",
-                "Detect ms (mean / p95)",
-                "Track ms (mean)",
-                "End-to-end FPS",
-            ],
-            [
+        prow = []
+        for label, p in (("CPU", res["pipeline"]), ("GPU", res.get("pipeline_gpu"))):
+            if not p:
+                continue
+            prow.append(
                 [
+                    label,
                     p["clip"],
                     p["frames"],
                     p["detector"],
@@ -75,7 +82,21 @@ def blocks(res: dict) -> dict[str, str]:
                     p["track_ms_mean"],
                     p["fps_end_to_end"],
                 ]
+            )
+        out["pipeline"] = table(
+            [
+                "Detector on",
+                "Clip",
+                "Frames",
+                "Detector",
+                "Input",
+                "Stride",
+                "Detector calls",
+                "Detect ms (mean / p95)",
+                "Track ms (mean)",
+                "End-to-end FPS",
             ],
+            prow,
         )
     if "tracker" in res:
         t = res["tracker"]
@@ -106,7 +127,7 @@ def blocks(res: dict) -> dict[str, str]:
         d = res["describer"]
         out["describer"] = (
             f"`{d['model']}` rewrote the template facts of {d['cases']} synthetic scenes "
-            f"(greedy decoding, {d['mean_seconds']} s each on average). The faithfulness guard "
+            f"(greedy decoding, {d.get('device', 'cpu')} / {d.get('dtype', 'float32')}, {d['mean_seconds']} s each on average). The faithfulness guard "
             f"accepted {d['accepted']} and rejected {d['rejected']} "
             f"(rejection rate {d['rejection_rate']:.0%}). Rejected rewrites fall back to the "
             "template text."

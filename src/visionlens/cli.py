@@ -20,8 +20,16 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--threads", type=int, default=None, help="torch/OpenCV threads (default: 1/4 of cores)"
     )
+    p.add_argument("--device", default=None, help="auto (default) | cpu | cuda")
     p.add_argument("--max-seconds", type=float, default=None)
     p.add_argument("--fps", type=float, default=15.0, help="analysis frame rate cap")
+
+
+def _apply_device(args: argparse.Namespace) -> None:
+    import os
+
+    if getattr(args, "device", None):
+        os.environ["VISIONLENS_DEVICE"] = args.device
 
 
 def _make_pipeline(args: argparse.Namespace):
@@ -31,6 +39,7 @@ def _make_pipeline(args: argparse.Namespace):
     from .sysutil import limit_threads
 
     limit_threads(args.threads)
+    _apply_device(args)
     det = load_detector(args.detector, args.input_size)
     return det, PipelineConfig(stride=args.stride), make_describer(args.describer)
 
@@ -86,7 +95,14 @@ def cmd_annotate(args: argparse.Namespace) -> int:
 def cmd_bench(args: argparse.Namespace) -> int:
     from .bench import run_all
 
-    run_all(args.out, args.threads, args.note, quick=args.quick, skip=tuple(args.skip))
+    run_all(
+        args.out,
+        args.threads,
+        args.note,
+        quick=args.quick,
+        skip=tuple(args.skip),
+        gpu_device=args.gpu_device,
+    )
     print(f"wrote {args.out}")
     return 0
 
@@ -97,6 +113,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     from .sysutil import limit_threads
 
     limit_threads(args.threads)
+    _apply_device(args)
     uvicorn.run(
         "visionlens.api:create_app", factory=True, host=args.host, port=args.port, log_level="info"
     )
@@ -133,6 +150,7 @@ def cmd_make_synthetic(args: argparse.Namespace) -> int:
 def cmd_record_demo(args: argparse.Namespace) -> int:
     from .demo import record_demo
 
+    _apply_device(args)
     record_demo(
         DEMO_DIR,
         args.detector,
@@ -169,6 +187,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--note", default="", help="free text, e.g. whether the machine was busy")
     p.add_argument("--quick", action="store_true")
     p.add_argument(
+        "--gpu-device",
+        default="auto",
+        help="device for the GPU rows, the pipeline GPU row and the describer (auto | cuda | cpu)",
+    )
+    p.add_argument(
         "--skip", nargs="*", default=[], choices=["detectors", "tracker", "pipeline", "describer"]
     )
     p.set_defaults(fn=cmd_bench)
@@ -177,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8106)
     p.add_argument("--threads", type=int, default=None)
+    p.add_argument("--device", default=None, help="auto (default) | cpu | cuda")
     p.set_defaults(fn=cmd_serve)
 
     p = sub.add_parser("fetch-models", help="download the models (one time)")

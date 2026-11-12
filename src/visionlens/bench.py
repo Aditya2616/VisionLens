@@ -20,7 +20,7 @@ import numpy as np
 from .metrics import evaluate
 from .schemas import Detection
 from .synth import SCENES, NoiseConfig, NoisyOracle, make_scene
-from .sysutil import cpu_name, limit_threads
+from .sysutil import cpu_name, gpu_name, limit_threads, resolve_device
 from .track import ByteTracker, TrackerConfig
 from .track.iou import associate, iou_matrix
 
@@ -47,12 +47,13 @@ def machine_info(threads: int, note: str) -> dict:
         "os": platform.platform(),
         "date": dt.date.today().isoformat(),
         "load_note": note,
+        "gpu": gpu_name(),
     }
 
 
 # ----------------------------------------------------------------------------- detectors
 def bench_detectors(
-    models: list[tuple[str, int]], n_frames: int = 40, warmup: int = 3
+    models: list[tuple[str, int]], n_frames: int = 40, warmup: int = 3, device: str = "cpu"
 ) -> list[dict]:
     from .detect.hf import HFDetector
     from .video import iter_frames
@@ -66,7 +67,7 @@ def bench_detectors(
     frames = frames[:n_frames]
     rows = []
     for model, size in models:
-        det = HFDetector(model, input_size=size)
+        det = HFDetector(model, input_size=size, device=device)
         params = sum(p.numel() for p in det.model.parameters()) / 1e6
         for f in frames[:warmup]:
             det.detect(f)
@@ -81,6 +82,7 @@ def bench_detectors(
         rows.append(
             {
                 "model": model,
+                "device": det.device,
                 "input_size": size,
                 "params_m": round(params, 1),
                 "ms_median": round(float(np.median(a)), 1),
@@ -184,15 +186,18 @@ def bench_tracker(seeds: int = 3, seconds: float = 10.0) -> dict:
 
 
 # --------------------------------------------------------------------------- end to end
-def bench_pipeline(stride: int = 3, model: str = "dfine-nano", input_size: int = 640) -> dict:
+def bench_pipeline(
+    stride: int = 3, model: str = "dfine-nano", input_size: int = 640, device: str = "cpu"
+) -> dict:
     from .detect.hf import HFDetector
     from .pipeline import PipelineConfig
     from .runner import analyze_file
 
-    det = HFDetector(model, input_size=input_size)
+    det = HFDetector(model, input_size=input_size, device=device)
     res = analyze_file(CLIP, det, PipelineConfig(stride=stride), threads=None)
     t = res.timings
     return {
+        "device": det.device,
         "clip": CLIP.name,
         "frames": res.meta.n_frames,
         "fps_video": res.meta.fps,
@@ -212,14 +217,14 @@ def bench_pipeline(stride: int = 3, model: str = "dfine-nano", input_size: int =
 
 
 # ----------------------------------------------------------------------------- describer
-def bench_describer(model_id: str | None = None) -> dict:
+def bench_describer(model_id: str | None = None, device: str | None = None) -> dict:
     """Run the local LLM rewrite on several fact sets and count guard rejections."""
     from .describe import Facts, TemplateDescriber, build_description
     from .describe.llm import LocalLLMDescriber
     from .events import extract_events, summarize
     from .pipeline import Pipeline, PipelineConfig
 
-    llm = LocalLLMDescriber(model_id)
+    llm = LocalLLMDescriber(model_id, device=device)
     cases = []
     for name in SCENES:
         for seed in (0, 1):
@@ -255,6 +260,8 @@ def bench_describer(model_id: str | None = None) -> dict:
     rej = sum(1 for r in rows if not r["accepted"])
     return {
         "model": llm.model_id,
+        "device": llm.device,
+        "dtype": llm.dtype,
         "cases": len(rows),
         "rejected": rej,
         "accepted": len(rows) - rej,
@@ -266,9 +273,15 @@ def bench_describer(model_id: str | None = None) -> dict:
 
 # ---------------------------------------------------------------------------------- main
 def run_all(
-    out: str | Path, threads: int | None, note: str, quick: bool = False, skip: tuple[str, ...] = ()
+    out: str | Path,
+    threads: int | None,
+    note: str,
+    quick: bool = False,
+    skip: tuple[str, ...] = (),
+    gpu_device: str = "auto",
 ) -> dict:
     n_threads = limit_threads(threads)
+    gpu = resolve_device(gpu_device)
     path = Path(out)
     results: dict = json.loads(path.read_text("utf-8")) if path.exists() else {}
     results["machine"] = machine_info(n_threads, note)
@@ -289,14 +302,22 @@ def run_all(
             models[:2] if quick else models, n_frames=15 if quick else 40
         )
         save()
+        if gpu != "cpu":
+            # A second, labelled column: the same models on the GPU (CPU threads kept low).
+            results["detectors_gpu"] = bench_detectors(
+                models[:2] if quick else models, n_frames=15 if quick else 40, device=gpu
+            )
+            save()
     if "tracker" not in skip:
         results["tracker"] = bench_tracker(seeds=1 if quick else 3)
         save()
     if "pipeline" not in skip:
-        results["pipeline"] = bench_pipeline()
+        results["pipeline"] = bench_pipeline(device="cpu")
+        if gpu != "cpu":
+            results["pipeline_gpu"] = bench_pipeline(device=gpu)
         save()
     if "describer" not in skip:
-        results["describer"] = bench_describer()
+        results["describer"] = bench_describer(device=gpu_device)
         save()
     save()
     return results

@@ -18,7 +18,7 @@ from .pipeline import Pipeline, PipelineConfig, analyze_image
 from .runner import analyze_file
 from .sprite import write_sprite
 from .synth import NoiseConfig, NoisyOracle, make_scene, render_video
-from .sysutil import cpu_name, limit_threads
+from .sysutil import cpu_name, gpu_name, limit_threads
 from .video import iter_frames
 
 
@@ -180,6 +180,8 @@ def record_demo(
                 "recorded_on": dt.date.today().isoformat(),
                 "cpu": cpu_name(),
                 "threads": n_threads,
+                "device": f"{det.device}" + (f" ({gpu_name()})" if det.device == "cuda" else ""),
+                "llm_dtype": getattr(llm, "dtype", None),
                 "detector": detector,
                 "stride": stride,
                 "note": machine_note,
