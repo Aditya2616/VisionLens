@@ -7,8 +7,8 @@
     "sprite_info": {
       "fps": 5.0,
       "cols": 8,
-      "thumb_w": 224,
-      "thumb_h": 126,
+      "thumb_w": 320,
+      "thumb_h": 180,
       "count": 40
     },
     "width": 480,
@@ -32,8 +32,8 @@
     "sprite_info": {
       "fps": 5.0,
       "cols": 8,
-      "thumb_w": 224,
-      "thumb_h": 126,
+      "thumb_w": 320,
+      "thumb_h": 180,
       "count": 40
     },
     "width": 480,

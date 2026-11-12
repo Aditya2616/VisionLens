@@ -92,7 +92,7 @@ def record_demo(
         render_video(scene, str(out_dir / "synthetic.webm"))
         frames = [(i / scene.fps, scene.render(i)) for i in range(scene.n_frames)]
         sprite = write_sprite(
-            frames, out_dir / "synthetic_sprite.jpg", fps=5.0, thumb_w=224, quality=50
+            frames, out_dir / "synthetic_sprite.jpg", fps=5.0, thumb_w=320, quality=60
         )
         pipe = Pipeline(NoisyOracle(scene, NoiseConfig.level(1, 1)), PipelineConfig(stride=stride))
         for _ in pipe.process((i, i / scene.fps, f) for i, (_, f) in enumerate(frames)):

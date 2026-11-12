@@ -117,7 +117,7 @@ def build(spec: dict, manifest: dict) -> None:
             raise SystemExit("no frames decoded")
         w.close()
         sprite = write_sprite(
-            frames, OUT / f"{spec['name']}_sprite.jpg", fps=5.0, thumb_w=224, quality=50
+            frames, OUT / f"{spec['name']}_sprite.jpg", fps=5.0, thumb_w=320, quality=60
         )
     manifest[spec["name"]] = {
         "label": spec["label"],
