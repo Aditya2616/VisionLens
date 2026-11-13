@@ -396,6 +396,10 @@ Recorded on 2026-11-12 with dfine-nano at stride 2; detector device: cuda (NVIDI
   play VP9 WebM the page falls back to a frame sequence (a sprite sheet of 5 frames per second drawn on a canvas) so
   the demo is never blank; the overlay and timeline work the same, but the picture is lower resolution and choppier.
   I tested that fallback by forcing it (`?player=sprite`) in Chromium, not on a real older iPhone.
+- WebKit: I checked the frame-sequence fallback (`?player=sprite`) in Playwright's WebKit build with the iPhone 14
+  profile and at 1440x900 on 2026-11-13: no console errors, no horizontal scroll, tap play, box selection, timeline
+  seek and clip switching all work, and the boxes match Chromium's. The WebM video path could not be checked there,
+  because that WebKit build (Windows) cannot play any media. None of this was on a physical iPhone or in real Safari.
 - Playback always starts from a tap; nothing autoplays.
 
 ## Layout
