@@ -403,14 +403,15 @@ The webcam starts only after an explicit tap; frames are processed on your machi
 
 - **Chromium:** VP9 WebM plays; checked with headless Chromium at 1440x900 and at 390x844 with touch.
 - **Safari:** per [caniuse](https://caniuse.com/webm) (WebM video format), Safari supports WebM from 14.1 on macOS 11.3
-  and later and from 17.4 on iOS. I have no iPhone or Safari here and have not tested it.
+  and later and from 17.4 on iOS. I checked the demo by hand in Safari on iPhones and it plays; I have not tested
+  Safari on a Mac.
 - **Fallback for browsers without VP9 WebM:** the page shows a frame sequence (a sprite sheet of 5 frames per second
   drawn on a canvas) so the demo is never blank; the overlay and timeline work the same, but the picture is lower
   resolution and choppier. I tested it by forcing it (`?player=sprite`) in Chromium and in Playwright's WebKit build with
   the iPhone 14 profile and at 1440x900 on 2026-11-13: no console errors, no horizontal scroll, and tap play, box
   selection, timeline seek and clip switching all work, with boxes matching Chromium's. The WebM video path could not be
-  checked in that WebKit build (Windows), because it cannot play any media. None of this was on a physical iPhone or in
-  real Safari.
+  checked in that WebKit build (Windows), because it cannot play any media; that path is covered by the hand check on
+  iPhones above.
 - **Playback** always starts from a tap; nothing autoplays.
 
 ## Design decisions
