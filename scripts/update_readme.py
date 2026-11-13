@@ -44,6 +44,9 @@ def size_text(n_bytes: float) -> str:
     return f"{mb / 1000:.1f} GB" if mb >= 995 else f"{mb:.0f} MB"
 
 
+QUIET_BELOW = 25  # percent: below this a load sample counts as a quiet machine
+
+
 def _busy(lo: dict, group: str, key: str) -> tuple[float, float] | None:
     v = lo.get(group) or {}
     a = (v.get("before") or {}).get(key)
@@ -55,17 +58,21 @@ def cpu_busy_text(lo: dict, group: str) -> str:
     ab = _busy(lo, group, "cpu_busy_percent")
     if not ab:
         return "CPU load not recorded for this group"
-    return (
-        f"measured with the CPU about {sum(ab) / 2:.0f}% busy with other work "
-        f"(sampled {ab[0]:.0f}% before, {ab[1]:.0f}% after); an idle machine will be faster"
-    )
+    mean = sum(ab) / 2
+    sampled = f"sampled {ab[0]:.0f}% before, {ab[1]:.0f}% after"
+    if max(ab) < QUIET_BELOW:
+        return f"measured on a quiet machine, the CPU about {mean:.0f}% busy ({sampled})"
+    return f"measured with the CPU about {mean:.0f}% busy with other work ({sampled}); an idle machine will be faster"
 
 
 def gpu_busy_text(lo: dict, group: str) -> str:
     ab = _busy(lo, group, "gpu_busy_percent")
     if not ab:
         return "GPU load not recorded"
-    return f"GPU about {sum(ab) / 2:.0f}% busy with other work"
+    mean = sum(ab) / 2
+    return f"GPU about {mean:.0f}% busy" + (
+        " (idle)" if max(ab) < QUIET_BELOW else " with other work"
+    )
 
 
 def _category(why: str) -> str:

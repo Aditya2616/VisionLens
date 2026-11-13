@@ -8,8 +8,8 @@
     "transformers": "5.7.0",
     "opencv": "5.0.0",
     "os": "Windows-11-10.0.26300-SP0",
-    "date": "2026-11-12",
-    "load_note": "CPU rows: 3 threads, measured while other projects' jobs kept the CPU busy (see the load samples); an idle machine will be faster. GPU rows: RTX 5060 Ti shared with other jobs, float32 detector, float16 language model.",
+    "date": "2026-11-13",
+    "load_note": "Quiet machine: nothing else running; see the load samples. CPU rows forced onto the CPU with 3 threads; GPU rows on an idle GPU.",
     "gpu": "NVIDIA GeForce RTX 5060 Ti"
   },
   "detectors": [
@@ -18,9 +18,9 @@
       "device": "cpu",
       "input_size": 640,
       "params_m": 3.8,
-      "ms_median": 149.4,
-      "ms_p95": 190.8,
-      "fps_median": 6.69,
+      "ms_median": 120.8,
+      "ms_p95": 151.4,
+      "fps_median": 8.28,
       "frames": 37,
       "detections_per_frame": 44.51
     },
@@ -29,9 +29,9 @@
       "device": "cpu",
       "input_size": 480,
       "params_m": 3.8,
-      "ms_median": 109.2,
-      "ms_p95": 134.3,
-      "fps_median": 9.15,
+      "ms_median": 71.0,
+      "ms_p95": 83.7,
+      "fps_median": 14.09,
       "frames": 37,
       "detections_per_frame": 42.11
     },
@@ -40,9 +40,9 @@
       "device": "cpu",
       "input_size": 320,
       "params_m": 3.8,
-      "ms_median": 63.2,
-      "ms_p95": 83.5,
-      "fps_median": 15.82,
+      "ms_median": 47.4,
+      "ms_p95": 53.6,
+      "fps_median": 21.09,
       "frames": 37,
       "detections_per_frame": 26.68
     },
@@ -51,9 +51,9 @@
       "device": "cpu",
       "input_size": 640,
       "params_m": 10.3,
-      "ms_median": 419.1,
-      "ms_p95": 576.5,
-      "fps_median": 2.39,
+      "ms_median": 243.0,
+      "ms_p95": 269.3,
+      "fps_median": 4.12,
       "frames": 37,
       "detections_per_frame": 47.16
     },
@@ -62,9 +62,9 @@
       "device": "cpu",
       "input_size": 640,
       "params_m": 20.2,
-      "ms_median": 545.7,
-      "ms_p95": 608.0,
-      "fps_median": 1.83,
+      "ms_median": 366.5,
+      "ms_p95": 414.8,
+      "fps_median": 2.73,
       "frames": 37,
       "detections_per_frame": 29.89
     }
@@ -75,9 +75,9 @@
       "device": "cuda",
       "input_size": 640,
       "params_m": 3.8,
-      "ms_median": 105.2,
-      "ms_p95": 163.6,
-      "fps_median": 9.51,
+      "ms_median": 52.3,
+      "ms_p95": 75.7,
+      "fps_median": 19.12,
       "frames": 37,
       "detections_per_frame": 44.51
     },
@@ -86,9 +86,9 @@
       "device": "cuda",
       "input_size": 480,
       "params_m": 3.8,
-      "ms_median": 106.0,
-      "ms_p95": 162.3,
-      "fps_median": 9.43,
+      "ms_median": 44.7,
+      "ms_p95": 66.8,
+      "fps_median": 22.35,
       "frames": 37,
       "detections_per_frame": 42.19
     },
@@ -97,9 +97,9 @@
       "device": "cuda",
       "input_size": 320,
       "params_m": 3.8,
-      "ms_median": 88.9,
-      "ms_p95": 144.2,
-      "fps_median": 11.25,
+      "ms_median": 33.3,
+      "ms_p95": 37.0,
+      "fps_median": 30.05,
       "frames": 37,
       "detections_per_frame": 26.62
     },
@@ -108,9 +108,9 @@
       "device": "cuda",
       "input_size": 640,
       "params_m": 10.3,
-      "ms_median": 97.6,
-      "ms_p95": 133.0,
-      "fps_median": 10.25,
+      "ms_median": 46.9,
+      "ms_p95": 51.4,
+      "fps_median": 21.33,
       "frames": 37,
       "detections_per_frame": 47.19
     },
@@ -119,9 +119,9 @@
       "device": "cuda",
       "input_size": 640,
       "params_m": 20.2,
-      "ms_median": 67.6,
-      "ms_p95": 84.4,
-      "fps_median": 14.8,
+      "ms_median": 35.8,
+      "ms_p95": 46.3,
+      "fps_median": 27.91,
       "frames": 37,
       "detections_per_frame": 29.81
     }
@@ -405,11 +405,11 @@
     "input_size": 640,
     "stride": 3,
     "detect_calls": 27,
-    "detect_ms_mean": 189.0,
-    "detect_ms_p95": 221.0,
-    "track_ms_mean": 0.481,
-    "wall_s": 5.21,
-    "fps_end_to_end": 15.35,
+    "detect_ms_mean": 109.5,
+    "detect_ms_p95": 125.4,
+    "track_ms_mean": 0.304,
+    "wall_s": 3.03,
+    "fps_end_to_end": 26.43,
     "tracks": 13,
     "events": 38
   },
@@ -423,11 +423,11 @@
     "input_size": 640,
     "stride": 3,
     "detect_calls": 27,
-    "detect_ms_mean": 107.4,
-    "detect_ms_p95": 155.3,
-    "track_ms_mean": 0.461,
-    "wall_s": 2.99,
-    "fps_end_to_end": 26.72,
+    "detect_ms_mean": 41.0,
+    "detect_ms_p95": 51.4,
+    "track_ms_mean": 0.262,
+    "wall_s": 1.17,
+    "fps_end_to_end": 68.31,
     "tracks": 13,
     "events": 37
   },
@@ -592,7 +592,7 @@
         "accepted_first_try": 9,
         "first_try_rate": 0.6,
         "mean_attempts": 1.8,
-        "mean_seconds": 10.43,
+        "mean_seconds": 5.33,
         "readability_shown": {
           "sentences": 7.0,
           "words": 110.2,
@@ -613,7 +613,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 15.8,
+            "seconds": 4.8,
             "text": "In this short clip, six individuals\u2014person 1, person 2, person 3, person 4, person 5, and person 6\u2014are seen moving around the scene. Person 1 appears first, moving right at a steady pace. Person 2 then moves left at a steady pace, followed by person 4 moving left at a steady pace. Person 3 enters from the left and moves right at a steady pace, while person 1 and person 3 come close together for 3 seconds. Person 4 enters from the right and moves left at a steady pace, and person 1 and person 3 come close together for another 2 seconds.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -631,7 +631,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 3.8,
+            "seconds": 2.8,
             "text": "In this short clip, six individuals\u2014person 1, person 2, person 3, person 4, person 5, and person 6\u2014are seen moving around the scene. Person 1 appears first, then person 2 moves to the right, followed by person 3 entering from the right. Person 4 enters from the left, and then person 5 and person 6 move to the left simultaneously. The scene also includes a few other individuals who appear and move around, creating a sense of movement and interaction within the scene.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -649,7 +649,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 5.2,
+            "seconds": 3.7,
             "text": "In this short clip, six individuals\u2014person 1, person 2, person 3, person 4, person 5, and person 6\u2014are seen moving around the scene. Person 1 appears first, moving right at a steady pace. Person 2 then moves left at a steady pace, followed by person 4 moving left at a steady pace. Person 3 enters from the left and moves right at a steady pace, while person 4 enters from the right and moves left at a steady pace. Five other pairs of individuals come close together, each lasting for 3 seconds. Person 5 then appears and moves right at a steady pace, while person 6 appears and moves left at a steady pace.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -671,7 +671,7 @@
               "count '4 people' is not in the facts"
             ],
             "reason": "count '4 people' is not in the facts",
-            "seconds": 16.2,
+            "seconds": 9.7,
             "text": "The scene was at its busiest, with 4 people and 1 car in view at once. Person 1 entered from the bottom and moved right slowly. Person 1 stopped for 3 seconds. Car 4 and person 2 entered from the left and moved right. Person 3 entered from the right and moved left at a steady pace. Two other pairs came close together. Person 1 and person 3 came close together for 1 second. Two other pairs came close together. Person 1 and person 2 came close together for 3 seconds. Car 4 and person 2 left toward the right. Person 3 left toward the left.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -689,7 +689,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 5.6,
+            "seconds": 3.1,
             "text": "In this short clip, five individuals\u2014four people and one car\u2014are observed moving through a scene. Person 1 enters from the bottom and moves right slowly, while person 3 enters from the right and moves left at a steady pace. Car 4 and person 2 enter from the left and move right, followed by person 5 appearing in the scene and moving right at a steady pace. Person 1 and person 3 come close together for 1 second, then person 1 and person 3 leave toward the bottom. Person 2 and person 5 come close together for 2 seconds, and person 5 appears in the scene and moves right at a steady pace.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -711,7 +711,7 @@
               "count 'four people' is not in the facts"
             ],
             "reason": "count 'four people' is not in the facts",
-            "seconds": 24.7,
+            "seconds": 12.9,
             "text": "A clip of a busy city street scene captures four individuals and a car moving through the crowded area. Person 1 enters from the bottom and moves right slowly, while car 4 and person 2 enter from the left and move right. Person 1 stops for 3 seconds before entering again. At 0:01, person 3 enters from the right and moves left at a steady pace. The scene is at its busiest, with four people and a car in view. Person 1 and person 3 come close together for 1 second. Two other pairs of people and a car come close together. Person 1 and person 2 come close together for 3 seconds. Car 4 and person 2 leaves toward the right.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -729,7 +729,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 7.5,
+            "seconds": 3.9,
             "text": "In this short clip, nine individuals are present, including nine people who appear and move around the scene. The sequence of events is as follows: person 1 enters from the left and moves right slowly, followed by two people (3, 6) entering from the left and moving right simultaneously. Person 4 then enters from the right and moves left slowly. Two more people (7, 8) enter from the left and move right. Person 6 and person 8 come close together for 3 seconds before person 4 stops for 2 seconds. Person 1 and person 8 come close together for another 4 seconds. Finally, person 9 appears in the scene and moves left at a steady pace.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -747,7 +747,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 7.3,
+            "seconds": 3.1,
             "text": "In this short clip, we see a group of people moving around in a room. Three people enter from the left and move right, while another three enter from the right and move left. A person named 1 and 4 come close together for 7 seconds. Two people (7, 8) enter from the right and move left. Person 5 and 8 come close together for 5 seconds. Person 9 enters from the left and moves right at a steady pace. Three people (2, 3, 9) disappear from view. Finally, three people (5, 7, 8) disappear from view.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -765,7 +765,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 8.6,
+            "seconds": 3.7,
             "text": "In this short clip, nine individuals are present, including nine people who appear and move around the scene.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -787,7 +787,7 @@
               "count 'seven people' is not in the facts"
             ],
             "reason": "count 'seven people' is not in the facts",
-            "seconds": 21.8,
+            "seconds": 9.5,
             "text": "A short clip of a scene shows seven people and three cars moving around. The main action is the entry of two people (2, 4) and car 5 into the scene. Person 3 appears and moves left slowly. Person 3 stops for 4 seconds. Two more people (3, 4) and car 7 enter from the right. Car 6 and person 7 enter from the right and move left. Car 1 and person 7 come close together for 1 second. Seven other pairs of people and cars come close together. Car 5 and person 2 leaves toward the right. Person 7 leaves toward the bottom.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -809,7 +809,7 @@
               "count 'seven people' is not in the facts"
             ],
             "reason": "count 'seven people' is not in the facts",
-            "seconds": 16.7,
+            "seconds": 9.2,
             "text": "A short clip of a scene shows seven people and three cars moving around. The main action is the entry of two people (2, 4) and car 5 into the scene from the left. Person 3 appears in the scene and moves left slowly. Person 2 and person 4 come close together for 9 seconds before person 3 stops. Person 3 then stops for 4 seconds. Cars 6 and 7 enter from the right and move left. Car 1 and person 7 comes close together for 1 second. Seven other pairs of people and cars come close together. Person 7 then leaves the scene toward the bottom.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -831,7 +831,7 @@
               "count 'seven people' is not in the facts"
             ],
             "reason": "count 'seven people' is not in the facts",
-            "seconds": 6.4,
+            "seconds": 3.8,
             "text": "A short clip of a scene shows seven people and three cars moving around.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -849,7 +849,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 5.4,
+            "seconds": 3.4,
             "text": "A clip of four people and three cars is shown, with the following events occurring:\n\n- Person 5 and person 9 come close together for 8 seconds.\n- Person 7 enters from the right and moves right slowly.\n- Car 11 enters from the right and moves left slowly.\n- Car 11 stops for 2 seconds.\n- Person 8 and person 13 come close together for 7 seconds.\n- 17 other pairs come close together.\n- Person 14 appears in the scene and stays in place.\n- Person 15 appears in the scene and stays in place.\n- Person 16 appears in the scene and stays in place.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -867,7 +867,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 5.1,
+            "seconds": 3.1,
             "text": "The scene begins with a bus entering the scene from the top and moving right at a steady pace. Then, a second bus appears and moves right at a steady pace. Next, a car enters from the bottom and moves right quickly. A third car appears and moves right at a steady pace. A fourth car and truck 9 enter from the bottom and move right. A fifth car and truck 9 come close together for 2 seconds before truck 9 and car 11 come close together for 1 second. Finally, a sixth car and truck 9 appear and move right.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -889,7 +889,7 @@
               "count 'seven people' is not in the facts"
             ],
             "reason": "count 'seven people' is not in the facts",
-            "seconds": 6.4,
+            "seconds": 3.3,
             "text": "In this short clip, we see seven people and three cars moving around the scene.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -905,12 +905,12 @@
           "device": "cpu",
           "dtype": "float32",
           "cases": 3,
-          "mean_seconds": 17.93,
+          "mean_seconds": 12.37,
           "mean_attempts": 1.0,
           "load": {
-            "cpu_busy_percent": 26.4,
-            "gpu_busy_percent": 21,
-            "gpu_mem_used_mb": 5591,
+            "cpu_busy_percent": 4.8,
+            "gpu_busy_percent": 0,
+            "gpu_mem_used_mb": 2316,
             "gpu_mem_total_mb": 16311
           }
         }
@@ -927,7 +927,7 @@
         "accepted_first_try": 7,
         "first_try_rate": 0.467,
         "mean_attempts": 1.8,
-        "mean_seconds": 12.34,
+        "mean_seconds": 7.07,
         "readability_shown": {
           "sentences": 7.0,
           "words": 100.47,
@@ -951,7 +951,7 @@
               "number 'eight' is not in the facts"
             ],
             "reason": null,
-            "seconds": 17.7,
+            "seconds": 9.6,
             "text": "Six people appeared in the scene, moving in opposite directions. Person 2 and person 4 came close together for three seconds, then person 1 and person 3 did the same for two seconds. Five other pairs of people came close together within six seconds. Then, person 5 entered from the bottom and moved right, while person 6 entered from the left and moved left. Two people, 4 and 6, left toward the left.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -969,7 +969,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 4.9,
+            "seconds": 2.7,
             "text": "In the scene, six individuals were present, moving either left or right at a steady pace. At the beginning, person 1 and person 3 approached each other for three seconds, while person 2 and person 4 got close together for two seconds. By the time the clip ended, five additional pairs had come into proximity, including person 5 who moved left and person 6 who entered from the right and moved right. Two people, 3 and 5, then departed towards the left.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -989,7 +989,7 @@
               "number 'eight' is not in the facts"
             ],
             "reason": null,
-            "seconds": 7.7,
+            "seconds": 4.3,
             "text": "Six people appeared in the scene, moving in opposite directions. Person 2 and person 4 came close together for three seconds, then person 1 and person 3 did the same for two seconds. Four more pairs of people came close together within six seconds. Then, person 5 and person 6 joined the action, moving in opposite directions. Two people left the scene towards the right.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1007,7 +1007,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 6.5,
+            "seconds": 3.6,
             "text": "Three people and one car were present in the scene. Initially, person 1 entered from the bottom and moved right slowly, stopping for three seconds. At 0:01, the scene was at its busiest, with all four individuals visible. Person 1 and person 3 came close together for one second, then two other pairs came close together at 0:04. By 0:05, person 1 and person 2 had come close together for three seconds. Finally, at 0:09, car 4 and person 2 left toward the right, while person 3 moved left.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1027,7 +1027,7 @@
               "count 'five people' is not in the facts"
             ],
             "reason": null,
-            "seconds": 16.1,
+            "seconds": 8.4,
             "text": "Four people and one car are observed moving across the frame. Person 1 starts by entering from the bottom and moves right slowly. They stop for three seconds before continuing. Car 4 and person 2 enter from the left and move right. Person 3 enters from the right and moves left at a steady pace. After 3 seconds, person 1 and person 3 come close together for one second. Two other pairs of people come close together at 0:04. Person 1 then leaves toward the bottom. At 0:06, person 2 and person 5 come close together for two seconds. Person 5 appears in the scene and moves right at a steady pace. Finally, car 4 and person 2 leave toward the right.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1045,7 +1045,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 4.9,
+            "seconds": 2.6,
             "text": "Three people and one car passed by on a busy street. Person 1 started moving right from the bottom, then stopped for three seconds. Person 3 followed from the right, moving left. People 1 and 3 got close for a split second. Two more pairs of people came near each other. Finally, person 1 and person 2 got very close for three seconds before they both went their separate ways. Car 4 and person 2 drove off to the right.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1063,7 +1063,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 7.4,
+            "seconds": 4.1,
             "text": "In the first ten seconds of the video, nine people entered the scene from different directions. Person 1 started moving right from the left side, while person 2 moved left from the same direction. Two more people (3 and 6) entered from the left and moved right, followed by person 4 who moved left from the right. Person 5 then appeared in the scene and moved left at a steady pace. Two other people (7 and 8) entered from the left and moved right, coming closer together for three seconds. Person 6 and person 8 got very close for three seconds, and then person 4 stopped for two seconds.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1081,7 +1081,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 8.0,
+            "seconds": 4.1,
             "text": "Three people (1, 3, 4) entered from the left and moved right, while three more people (2, 5, 6) entered from the right and moved left. Person 1 and person 4 came close together for seven seconds, and 13 other pairs came close together. Two people (7, 8) then entered from the right and moved left, followed by person 5 and person 8 coming close together for five seconds. Person 9 entered from the left and moved right at a steady pace, and person 10 appeared in the scene and moved left at a steady pace.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1103,7 +1103,7 @@
               "claims an exit that is not in the events"
             ],
             "reason": "claims an exit that is not in the events",
-            "seconds": 23.0,
+            "seconds": 14.1,
             "text": "In this brief clip, nine individuals are observed moving across the frame. Initially, person 1 enters from the right and moves steadily left. Person 2 then appears and moves right at a consistent pace. Two other individuals (3 and 4) enter from the left and move right. People 3 and 4 come close together for four seconds, then person 5 joins them and moves right slowly. Two more individuals (6 and 7) appear in the scene and move right. Person 5 and person 8 get closer for four seconds before person 8 enters from the left and moves right slowly. Finally, two individuals (5 and 6) stop for two seconds, followed by person 9 entering from the left and remaining stationary.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -1124,7 +1124,7 @@
               "number 'eight' is not in the facts"
             ],
             "reason": null,
-            "seconds": 23.1,
+            "seconds": 12.9,
             "text": "In the first ten seconds of the video, four people and three cars were present. Initially, two individuals (2, 4) and car 5 entered from the left side and moved rightward. Person 3 then appeared in the scene and slowly moved leftwards. After a brief pause of four seconds, person 3 stopped momentarily. Next, person 2 and person 4 came closer together for nine seconds. At 0:02, car 6 and person 7 entered from the right side and moved leftwards. Car 1 and person 7 came close together for one second. At 0:03, car 5 and person 2 left toward the right. Person 7 left toward the bottom.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1144,7 +1144,7 @@
               "number 'eight' is not in the facts"
             ],
             "reason": null,
-            "seconds": 13.7,
+            "seconds": 8.3,
             "text": "In the first ten seconds of the video, four people and three cars were present. Initially, two individuals (2, 4) and car 5 entered from the left and moved right. Person 3 then appeared in the scene and slowly moved left. People 2 and 4 came close together for nine seconds, followed by person 3 stopping for four seconds. Seven other pairs of people and cars then came close together. After nine seconds, car 6 and person 7 entered from the right and moved left, while car 1 and person 7 came close together for one second.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1164,7 +1164,7 @@
               "car 6 is not a tracked object"
             ],
             "reason": null,
-            "seconds": 14.7,
+            "seconds": 8.4,
             "text": "In the brief 10-second clip, seven distinct objects were present: four individuals (persons 2, 4, 6, and 8) and three vehicles (cars 1, 5, and 7). Initially, person 2 entered from the left and moved steadily to the right. Person 4 then appeared on the scene and moved slowly to the left. Person 4 paused for three seconds before continuing their journey. Cars 1 and 7 then approached from the right, moving left. Finally, cars 5 and 7, along with persons 2 and 6, separated and moved away to the right.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1186,7 +1186,7 @@
               "'the left' disagrees with the exit edge or direction of travel"
             ],
             "reason": "'the left' disagrees with the exit edge or direction of travel",
-            "seconds": 23.6,
+            "seconds": 14.1,
             "text": "In this short video clip, there were 15 distinct objects observed, including 11 people and 4 cars. Throughout the entire 8-second duration, four individuals (people 5, 8, 9, and 12) and three vehicles (cars 1, 2, and 3) remained stationary. The scene began with person 5 and person 9 coming close together for eight seconds. Person 7 then entered from the right and moved slowly to the left. Car 11 also entered from the right and moved slowly to the left before stopping for two seconds. Person 8 and person 13 came close together for seven seconds, and 17 other pairs of people also came close together during the clip.",
             "shown_is_rewrite": false,
             "readability_shown": {
@@ -1204,7 +1204,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 8.5,
+            "seconds": 5.2,
             "text": "Four cars, two buses, and two trucks are moving on a road. Bus 1 starts from the top and moves right at a steady pace. At 0:02, bus 2 joins the scene and continues moving right. Car 3 enters from the bottom and moves right quickly. By 0:03, both bus 2 and car 3 disappear from view. At 0:04, car 5 appears in the scene and moves right steadily. Cars 6 and truck 9 enter from the bottom and move right. Truck 8 also enters from the bottom and stays put. For 2 seconds, truck 9 and car 6 come close together. Then, for 1 second, truck 9 and car 11 get closer.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1222,7 +1222,7 @@
             "attempts": 1,
             "attempt_log": [],
             "reason": null,
-            "seconds": 5.3,
+            "seconds": 3.6,
             "text": "Two people and a car entered from the left, moving right. Person 3 appeared and slowly moved left. They came close together for seven seconds. Then, person 2 and person 4 approached each other for three seconds. Cars 6 and 5, along with person 7, entered from the right and moved left. Person 2 and person 3 got close for one second. Five other pairs also came close together. Car 5 and person 2 left toward the right, while car 1 and person 7 went down, and car 6 headed left.",
             "shown_is_rewrite": true,
             "readability_shown": {
@@ -1238,12 +1238,12 @@
           "device": "cpu",
           "dtype": "float32",
           "cases": 3,
-          "mean_seconds": 76.13,
+          "mean_seconds": 54.37,
           "mean_attempts": 2.0,
           "load": {
-            "cpu_busy_percent": 65.0,
-            "gpu_busy_percent": 86,
-            "gpu_mem_used_mb": 10114,
+            "cpu_busy_percent": 8.2,
+            "gpu_busy_percent": 0,
+            "gpu_mem_used_mb": 4679,
             "gpu_mem_total_mb": 16311
           }
         }
@@ -1253,57 +1253,57 @@
   "load_observed": {
     "describer": {
       "before": {
-        "cpu_busy_percent": 10.8,
+        "cpu_busy_percent": 10.7,
         "gpu_busy_percent": 0,
-        "gpu_mem_used_mb": 835,
+        "gpu_mem_used_mb": 1732,
         "gpu_mem_total_mb": 16311
       },
       "after": {
-        "cpu_busy_percent": 73.7,
-        "gpu_busy_percent": 87,
-        "gpu_mem_used_mb": 10114,
+        "cpu_busy_percent": 11.5,
+        "gpu_busy_percent": 0,
+        "gpu_mem_used_mb": 4679,
         "gpu_mem_total_mb": 16311
       }
     },
     "detectors": {
       "before": {
-        "cpu_busy_percent": 57.6,
-        "gpu_busy_percent": 83,
-        "gpu_mem_used_mb": 12914,
+        "cpu_busy_percent": 0.9,
+        "gpu_busy_percent": 0,
+        "gpu_mem_used_mb": 803,
         "gpu_mem_total_mb": 16311
       },
       "after": {
-        "cpu_busy_percent": 69.0,
-        "gpu_busy_percent": 82,
-        "gpu_mem_used_mb": 13439,
+        "cpu_busy_percent": 10.4,
+        "gpu_busy_percent": 0,
+        "gpu_mem_used_mb": 1356,
         "gpu_mem_total_mb": 16311
       }
     },
     "pipeline": {
       "before": {
-        "cpu_busy_percent": 64.6,
-        "gpu_busy_percent": 83,
-        "gpu_mem_used_mb": 13439,
+        "cpu_busy_percent": 2.6,
+        "gpu_busy_percent": 0,
+        "gpu_mem_used_mb": 1356,
         "gpu_mem_total_mb": 16311
       },
       "after": {
-        "cpu_busy_percent": 59.4,
-        "gpu_busy_percent": 86,
-        "gpu_mem_used_mb": 13453,
+        "cpu_busy_percent": 5.5,
+        "gpu_busy_percent": 0,
+        "gpu_mem_used_mb": 1370,
         "gpu_mem_total_mb": 16311
       }
     },
     "captioner": {
       "before": {
-        "cpu_busy_percent": 34.3,
-        "gpu_busy_percent": 37,
-        "gpu_mem_used_mb": 5196,
+        "cpu_busy_percent": 4.3,
+        "gpu_busy_percent": 0,
+        "gpu_mem_used_mb": 1370,
         "gpu_mem_total_mb": 16311
       },
       "after": {
-        "cpu_busy_percent": 20.0,
+        "cpu_busy_percent": 9.1,
         "gpu_busy_percent": 0,
-        "gpu_mem_used_mb": 1555,
+        "gpu_mem_used_mb": 1732,
         "gpu_mem_total_mb": 16311
       }
     }
@@ -1338,7 +1338,7 @@
         "setting_ok": 7,
         "names_unseen": 0,
         "one_sentence": 14,
-        "mean_seconds": 2.74,
+        "mean_seconds": 1.5,
         "rows": [
           {
             "case": "recorded-intersection",
@@ -1354,7 +1354,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 3.51
+            "seconds": 1.7
           },
           {
             "case": "recorded-traffic",
@@ -1370,7 +1370,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 3.25
+            "seconds": 1.68
           },
           {
             "case": "recorded-synthetic",
@@ -1386,7 +1386,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 2.31
+            "seconds": 1.22
           },
           {
             "case": "recorded-still",
@@ -1400,7 +1400,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 1.48
+            "seconds": 0.88
           },
           {
             "case": "synthetic-crossing-0",
@@ -1416,7 +1416,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 2.19
+            "seconds": 1.13
           },
           {
             "case": "synthetic-crossing-1",
@@ -1432,7 +1432,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 2.17
+            "seconds": 1.18
           },
           {
             "case": "synthetic-crossing-2",
@@ -1448,7 +1448,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 2.07
+            "seconds": 1.19
           },
           {
             "case": "synthetic-occlusion-0",
@@ -1464,7 +1464,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 3.62
+            "seconds": 1.97
           },
           {
             "case": "synthetic-occlusion-1",
@@ -1480,7 +1480,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 3.82
+            "seconds": 1.96
           },
           {
             "case": "synthetic-occlusion-2",
@@ -1496,7 +1496,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 3.74
+            "seconds": 2.03
           },
           {
             "case": "synthetic-crowd-0",
@@ -1510,7 +1510,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 3.25
+            "seconds": 1.83
           },
           {
             "case": "synthetic-crowd-1",
@@ -1526,7 +1526,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 2.83
+            "seconds": 1.57
           },
           {
             "case": "synthetic-crowd-2",
@@ -1540,7 +1540,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 2.27
+            "seconds": 1.18
           },
           {
             "case": "synthetic-street-0",
@@ -1554,7 +1554,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 2.54
+            "seconds": 1.39
           },
           {
             "case": "synthetic-street-1",
@@ -1568,7 +1568,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 2.42
+            "seconds": 1.49
           },
           {
             "case": "synthetic-street-2",
@@ -1582,7 +1582,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 2.4
+            "seconds": 1.61
           }
         ]
       },
@@ -1595,7 +1595,7 @@
         "setting_ok": 6,
         "names_unseen": 0,
         "one_sentence": 0,
-        "mean_seconds": 1.53,
+        "mean_seconds": 0.83,
         "rows": [
           {
             "case": "recorded-intersection",
@@ -1609,7 +1609,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": false,
-            "seconds": 1.41
+            "seconds": 0.92
           },
           {
             "case": "recorded-traffic",
@@ -1623,7 +1623,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.4
+            "seconds": 0.83
           },
           {
             "case": "recorded-synthetic",
@@ -1637,7 +1637,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": false,
-            "seconds": 1.5
+            "seconds": 0.81
           },
           {
             "case": "recorded-still",
@@ -1649,7 +1649,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": false,
-            "seconds": 0.53
+            "seconds": 0.27
           },
           {
             "case": "synthetic-crossing-0",
@@ -1663,7 +1663,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.5
+            "seconds": 0.82
           },
           {
             "case": "synthetic-crossing-1",
@@ -1677,7 +1677,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.44
+            "seconds": 0.83
           },
           {
             "case": "synthetic-crossing-2",
@@ -1691,7 +1691,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.52
+            "seconds": 0.87
           },
           {
             "case": "synthetic-occlusion-0",
@@ -1705,7 +1705,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.53
+            "seconds": 0.91
           },
           {
             "case": "synthetic-occlusion-1",
@@ -1719,7 +1719,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.5
+            "seconds": 0.93
           },
           {
             "case": "synthetic-occlusion-2",
@@ -1733,7 +1733,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.71
+            "seconds": 0.9
           },
           {
             "case": "synthetic-crowd-0",
@@ -1747,7 +1747,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 2.22
+            "seconds": 0.89
           },
           {
             "case": "synthetic-crowd-1",
@@ -1761,7 +1761,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 2.21
+            "seconds": 0.93
           },
           {
             "case": "synthetic-crowd-2",
@@ -1775,7 +1775,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": false,
-            "seconds": 1.53
+            "seconds": 0.88
           },
           {
             "case": "synthetic-street-0",
@@ -1789,7 +1789,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": false,
-            "seconds": 1.55
+            "seconds": 0.87
           },
           {
             "case": "synthetic-street-1",
@@ -1803,7 +1803,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": false,
-            "seconds": 1.49
+            "seconds": 0.86
           },
           {
             "case": "synthetic-street-2",
@@ -1817,7 +1817,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": false,
-            "seconds": 1.48
+            "seconds": 0.82
           }
         ]
       },
@@ -1830,7 +1830,7 @@
         "setting_ok": 10,
         "names_unseen": 0,
         "one_sentence": 16,
-        "mean_seconds": 4.24,
+        "mean_seconds": 2.27,
         "rows": [
           {
             "case": "recorded-intersection",
@@ -1844,7 +1844,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 4.01
+            "seconds": 2.0
           },
           {
             "case": "recorded-traffic",
@@ -1858,7 +1858,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 4.64
+            "seconds": 2.16
           },
           {
             "case": "recorded-synthetic",
@@ -1872,7 +1872,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 4.65
+            "seconds": 2.31
           },
           {
             "case": "recorded-still",
@@ -1884,7 +1884,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 1.74
+            "seconds": 0.77
           },
           {
             "case": "synthetic-crossing-0",
@@ -1900,7 +1900,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 4.84
+            "seconds": 2.36
           },
           {
             "case": "synthetic-crossing-1",
@@ -1916,7 +1916,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 5.39
+            "seconds": 2.5
           },
           {
             "case": "synthetic-crossing-2",
@@ -1932,7 +1932,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 5.07
+            "seconds": 2.44
           },
           {
             "case": "synthetic-occlusion-0",
@@ -1946,7 +1946,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 5.08
+            "seconds": 2.51
           },
           {
             "case": "synthetic-occlusion-1",
@@ -1960,7 +1960,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 5.24
+            "seconds": 2.4
           },
           {
             "case": "synthetic-occlusion-2",
@@ -1974,7 +1974,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 4.08
+            "seconds": 2.58
           },
           {
             "case": "synthetic-crowd-0",
@@ -1990,7 +1990,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 3.46
+            "seconds": 2.35
           },
           {
             "case": "synthetic-crowd-1",
@@ -2006,7 +2006,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 3.55
+            "seconds": 2.02
           },
           {
             "case": "synthetic-crowd-2",
@@ -2022,7 +2022,7 @@
             "unseen": [],
             "setting_ok": false,
             "one_sentence": true,
-            "seconds": 3.79
+            "seconds": 2.46
           },
           {
             "case": "synthetic-street-0",
@@ -2038,7 +2038,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 3.79
+            "seconds": 2.41
           },
           {
             "case": "synthetic-street-1",
@@ -2054,7 +2054,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 4.27
+            "seconds": 2.59
           },
           {
             "case": "synthetic-street-2",
@@ -2070,7 +2070,7 @@
             "unseen": [],
             "setting_ok": true,
             "one_sentence": true,
-            "seconds": 4.21
+            "seconds": 2.41
           }
         ]
       }
@@ -2080,11 +2080,11 @@
       "device": "cpu",
       "dtype": "float32",
       "cases": 3,
-      "mean_seconds": 11.31,
+      "mean_seconds": 6.23,
       "load": {
-        "cpu_busy_percent": 31.8,
+        "cpu_busy_percent": 13.0,
         "gpu_busy_percent": 0,
-        "gpu_mem_used_mb": 1555,
+        "gpu_mem_used_mb": 1732,
         "gpu_mem_total_mb": 16311
       }
     }

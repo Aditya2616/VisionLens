@@ -1,4 +1,4 @@
-# VisionLens
+﻿# VisionLens
 
 A multimodal pipeline that sees, labels and describes a scene: **detect, track, describe**.
 
@@ -150,18 +150,18 @@ so its stage timings are GPU timings; the page labels them "GPU" next to the det
 
 **Machine.**
 <!-- RESULTS:machine:start -->
-AMD Ryzen 5 8500G w/ Radeon 740M Graphics, 12 logical cores (3 threads used for the CPU rows). PyTorch 2.11.0+cu128 (the CPU rows are forced onto the CPU), transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15. GPU: NVIDIA GeForce RTX 5060 Ti. Measured on 2026-11-12.
+AMD Ryzen 5 8500G w/ Radeon 740M Graphics, 12 logical cores (3 threads used for the CPU rows). PyTorch 2.11.0+cu128 (the CPU rows are forced onto the CPU), transformers 5.7.0, OpenCV 5.0.0, Python 3.13.15. GPU: NVIDIA GeForce RTX 5060 Ti. Measured on 2026-11-13.
 <!-- RESULTS:machine:end -->
 
 **Load observed by the benchmark itself**, sampled before and after each group. Each table below also states the
-CPU-busy percentage during its own run; an idle machine will be faster.
+CPU-busy percentage during its own run; a figure counts as taken on a quiet machine when both samples are under 25%.
 <!-- RESULTS:load:start -->
 | Group | Before | After |
 |---|---|---|
-| describer | CPU 11% busy, GPU 0% busy, 835 of 16311 MB of its memory in use | CPU 74% busy, GPU 87% busy, 10114 of 16311 MB of its memory in use |
-| detectors | CPU 58% busy, GPU 83% busy, 12914 of 16311 MB of its memory in use | CPU 69% busy, GPU 82% busy, 13439 of 16311 MB of its memory in use |
-| pipeline | CPU 65% busy, GPU 83% busy, 13439 of 16311 MB of its memory in use | CPU 59% busy, GPU 86% busy, 13453 of 16311 MB of its memory in use |
-| captioner | CPU 34% busy, GPU 37% busy, 5196 of 16311 MB of its memory in use | CPU 20% busy, GPU 0% busy, 1555 of 16311 MB of its memory in use |
+| describer | CPU 11% busy, GPU 0% busy, 1732 of 16311 MB of its memory in use | CPU 12% busy, GPU 0% busy, 4679 of 16311 MB of its memory in use |
+| detectors | CPU 1% busy, GPU 0% busy, 803 of 16311 MB of its memory in use | CPU 10% busy, GPU 0% busy, 1356 of 16311 MB of its memory in use |
+| pipeline | CPU 3% busy, GPU 0% busy, 1356 of 16311 MB of its memory in use | CPU 6% busy, GPU 0% busy, 1370 of 16311 MB of its memory in use |
+| captioner | CPU 4% busy, GPU 0% busy, 1370 of 16311 MB of its memory in use | CPU 9% busy, GPU 0% busy, 1732 of 16311 MB of its memory in use |
 <!-- RESULTS:load:end -->
 
 ### Detector speed
@@ -169,24 +169,24 @@ CPU-busy percentage during its own run; an idle machine will be faster.
 <!-- RESULTS:detectors:start -->
 | Detector | Input px | Params (M) | CPU median ms | CPU p95 ms | CPU FPS | GPU median ms / FPS | Dets/frame |
 |---|---|---|---|---|---|---|---|
-| dfine-nano | 640 | 3.8 | 149.4 | 190.8 | 6.69 | 105.2 ms / 9.51 | 44.51 |
-| dfine-nano | 480 | 3.8 | 109.2 | 134.3 | 9.15 | 106.0 ms / 9.43 | 42.11 |
-| dfine-nano | 320 | 3.8 | 63.2 | 83.5 | 15.82 | 88.9 ms / 11.25 | 26.68 |
-| dfine-small | 640 | 10.4 | 419.1 | 576.5 | 2.39 | 97.6 ms / 10.25 | 47.16 |
-| rtdetr-r18 | 640 | 20.2 | 545.7 | 608.0 | 1.83 | 67.6 ms / 14.8 | 29.89 |
+| dfine-nano | 640 | 3.8 | 120.8 | 151.4 | 8.28 | 52.3 ms / 19.12 | 44.51 |
+| dfine-nano | 480 | 3.8 | 71.0 | 83.7 | 14.09 | 44.7 ms / 22.35 | 42.11 |
+| dfine-nano | 320 | 3.8 | 47.4 | 53.6 | 21.09 | 33.3 ms / 30.05 | 26.68 |
+| dfine-small | 640 | 10.4 | 243.0 | 269.3 | 4.12 | 46.9 ms / 21.33 | 47.16 |
+| rtdetr-r18 | 640 | 20.2 | 366.5 | 414.8 | 2.73 | 35.8 ms / 27.91 | 29.89 |
 
-One detector call on a 480x270 frame of the intersection clip (resized to the input size), batch 1, 37 frames, per-call time includes pre- and post-processing. CPU columns: 3 threads, float32, measured with the CPU about 63% busy with other work (sampled 58% before, 69% after); an idle machine will be faster. GPU column: NVIDIA GeForce RTX 5060 Ti, float32, GPU about 82% busy with other work.
+One detector call on a 480x270 frame of the intersection clip (resized to the input size), batch 1, 37 frames, per-call time includes pre- and post-processing. CPU columns: 3 threads, float32, measured on a quiet machine, the CPU about 6% busy (sampled 1% before, 10% after). GPU column: NVIDIA GeForce RTX 5060 Ti, float32, GPU about 0% busy (idle).
 <!-- RESULTS:detectors:end -->
 
 ### End to end, on a real clip
 
 <!-- RESULTS:pipeline:start -->
-CPU row: 3 threads, measured with the CPU about 62% busy with other work (sampled 65% before, 59% after); an idle machine will be faster. GPU row: float32 detector, GPU about 84% busy with other work.
+CPU row: 3 threads, measured on a quiet machine, the CPU about 4% busy (sampled 3% before, 6% after). GPU row: float32 detector, GPU about 0% busy (idle).
 
 | Detector on | Clip | Frames | Detector | Input | Stride | Detector calls | Detect ms (mean / p95) | Track ms (mean) | End-to-end FPS |
 |---|---|---|---|---|---|---|---|---|---|
-| CPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 189.0 / 221.0 | 0.481 | 15.35 |
-| GPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 107.4 / 155.3 | 0.461 | 26.72 |
+| CPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 109.5 / 125.4 | 0.304 | 26.43 |
+| GPU | intersection.webm | 80 | dfine-nano | 640px | 3 | 27 | 41.0 / 51.4 | 0.262 | 68.31 |
 <!-- RESULTS:pipeline:end -->
 
 ### Tracking quality (synthetic scenes with exact ground truth)
@@ -262,8 +262,8 @@ regenerated, up to three attempts in all, with the guard's reason and the offend
 
 | Model | Accepted on the first try | Accepted after retries | Mean attempts | Mean time per clip, GPU | Mean time per clip, CPU |
 |---|---|---|---|---|---|
-| Qwen/Qwen2.5-0.5B-Instruct | 9 / 15 (60%) | 9 / 15 (60%) | 1.8 | 10.43 s (cuda, float16) | 17.93 s, 1.0 attempts (cpu, float32, 3 cases, CPU 26.4% busy) |
-| Qwen/Qwen2.5-1.5B-Instruct | 7 / 15 (47%) | 13 / 15 (87%) | 1.8 | 12.34 s (cuda, float16) | 76.13 s, 2.0 attempts (cpu, float32, 3 cases, CPU 65.0% busy) |
+| Qwen/Qwen2.5-0.5B-Instruct | 9 / 15 (60%) | 9 / 15 (60%) | 1.8 | 5.33 s (cuda, float16) | 12.37 s, 1.0 attempts (cpu, float32, 3 cases, CPU 4.8% busy) |
+| Qwen/Qwen2.5-1.5B-Instruct | 7 / 15 (47%) | 13 / 15 (87%) | 1.8 | 7.07 s (cuda, float16) | 54.37 s, 2.0 attempts (cpu, float32, 3 cases, CPU 8.2% busy) |
 <!-- RESULTS:describer:end -->
 
 How the results read, measured objectively on the same cases:
@@ -314,9 +314,9 @@ guard verdict and the number of attempts, or the labelled fallback when the guar
 
 | Prompt | Setting named correctly (all) | Setting named correctly (3 real captures) | Names an unseen class | One complete sentence | Mean time per clip |
 |---|---|---|---|---|---|
-| A | 7 / 16 | 3 / 3 | 0 / 16 | 14 / 16 | 2.74 s (cuda, float16) |
-| B | 6 / 16 | 2 / 3 | 0 / 16 | 0 / 16 | 1.53 s (cuda, float16) |
-| C (chosen) | 10 / 16 | 3 / 3 | 0 / 16 | 16 / 16 | 4.24 s (cuda, float16) |
+| A | 7 / 16 | 3 / 3 | 0 / 16 | 14 / 16 | 1.5 s (cuda, float16) |
+| B | 6 / 16 | 2 / 3 | 0 / 16 | 0 / 16 | 0.83 s (cuda, float16) |
+| C (chosen) | 10 / 16 | 3 / 3 | 0 / 16 | 16 / 16 | 2.27 s (cuda, float16) |
 
 Word lists for rubric (1) (`SETTING_WORDS` in `src/visionlens/bench.py`):
 - intersection: street, road, intersection, junction, crossroads, crossing, city, urban, tram, traffic
@@ -330,7 +330,7 @@ Prompts:
 - **B**: “What kind of place is this? Answer with one short sentence that names the place and the main things in it.”
 - **C**: “Describe the setting of this image in one complete sentence of at least eight words: what kind of place it is and what is in it.”
 
-Time per clip (three key frames) for prompt C: 4.24 s on cuda (float16) over 16 cases, 11.31 s on the cpu (float32) over 3 cases with the CPU 31.8% busy.
+Time per clip (three key frames) for prompt C: 2.27 s on cuda (float16) over 16 cases, 6.23 s on the cpu (float32) over 3 cases with the CPU 13.0% busy.
 <!-- RESULTS:captioner:end -->
 
 The captions the evaluation run produced for the recorded clips (the chosen prompt; the recorded demo has its own
@@ -420,7 +420,7 @@ results/           results.json, the output of `visionlens bench`
   default describer.
 - The scene captioner is a 256 M-parameter model; its captions are generic, it fails the word-list test on the
   plaza-like rendered scenes, and the cross-check only covers detector classes (person, car, bus, and so on).
-- Timings were measured on a shared machine; the load tables above give the CPU and GPU load seen during each run.
+- The benchmark timings were taken on an otherwise idle machine (the date is in the Machine block); the load tables above give the CPU and GPU load seen during each run. The stage timings in the recorded demo come from its own earlier recording (see The recorded demo), made while the GPU was shared with other jobs, and are not benchmark figures.
 - The hosted describers (OpenAI, Anthropic; see `.env.example`) take their key and model id from `OPENAI_API_KEY` and
   `OPENAI_MODEL`, or `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (or a constructor argument). There is no default model
   id, and selecting one without it gives a clear configuration error (the description then falls back to the
