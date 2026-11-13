@@ -343,7 +343,7 @@ function selectTrack(id) {
   timeline.select({ id: null, ids: [id], eventIds: evs.map((e) => e.id) });
   desc.highlight(evs.map((e) => e.id));
   const shown = evs.filter((e) => e.kind !== 'count_change').slice(0, 3).map(describeEvent);
-  tip.textContent = `${cls} ${id}${shown.length ? ' · ' + shown.join(' | ') : ' · no events'}${evs.length > 3 ? ` | +${evs.length - 3}` : ''}`;
+  tip.textContent = [`${cls} ${id}${shown.length ? '' : ' · no events'}`, ...shown, ...(evs.length > 3 ? [`+${evs.length - 3} more`] : [])].join('\n');
   tip.hidden = false;
   state.lastT = -1;
 }

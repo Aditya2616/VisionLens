@@ -214,7 +214,7 @@ h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: 
 .tl-head .dim { letter-spacing: 0.04em; text-align: right; }
 .timeline { position: relative; max-height: 230px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
 .timeline canvas { display: block; width: 100%; }
-.tl-tip { position: absolute; z-index: 3; line-height: 1.4; left: 12px; right: 12px; bottom: 8px; padding: 8px 10px; font-size: 11px; background: rgba(7, 8, 10, 0.92); border: 1px solid rgba(215, 255, 63, 0.5); border-radius: 8px; }
+.tl-tip { position: absolute; z-index: 3; line-height: 1.4; left: 12px; right: 12px; bottom: 8px; padding: 8px 10px; font-size: 11px; background: #07080a; border: 1px solid rgba(215, 255, 63, 0.5); border-radius: 8px; white-space: pre-line; }
 .tl-tip[hidden] { display: none; }
 
 /* cards */

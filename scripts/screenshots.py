@@ -119,7 +119,9 @@ def phone_shots(browser, out: Path) -> None:
     page.click("#bigplay")
     page.wait_for_timeout(4500)
     pick_track(page)
-    clip = card_clip(page, "#strip", "#timeline", 390, 844)
+    # the selection (highlighted box, bold timeline row) is the subject; the tooltip is closed so it covers no rows
+    page.evaluate("document.querySelector('#tl-tip').hidden = true")
+    clip = card_clip(page, "#stage", "#timeline", 390, 844)
     page.screenshot(path=str(out / "phone-selected-track.png"), clip=clip)
     ctx.close()
     if errors:
