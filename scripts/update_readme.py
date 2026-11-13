@@ -430,10 +430,19 @@ def blocks(root: Path = ROOT) -> dict[str, str]:
                 for r in mod["rows"]
                 if not r["accepted"] and len(set(r["attempt_log"])) == 1 and r["attempts"] > 1
             )
+            if mod["accepted"] == mod["accepted_first_try"]:
+                effect = (
+                    f"retries did not change acceptance ({mod['accepted']} of {mod['cases']}; "
+                    f"mean {mod['mean_attempts']} attempts)"
+                )
+            else:
+                effect = (
+                    f"retries moved acceptance from {mod['accepted_first_try']} of {mod['cases']} "
+                    f"cases on the first try to {mod['accepted']} of {mod['cases']} "
+                    f"(mean {mod['mean_attempts']} attempts)"
+                )
             parts.append(
-                f"for `{name}` retries moved acceptance from {mod['accepted_first_try']} of {mod['cases']} "
-                f"cases on the first try to {mod['accepted']} of {mod['cases']} "
-                f"(mean {mod['mean_attempts']} attempts); in {same} of its {mod['rejected']} final "
+                f"for `{name}` {effect}; in {same} of its {mod['rejected']} final "
                 "rejections every attempt failed for the same reason"
             )
         out["retry_effect"] = "Effect of the retries: " + "; ".join(parts) + "."

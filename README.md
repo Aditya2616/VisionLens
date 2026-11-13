@@ -1,22 +1,28 @@
-﻿# VisionLens
+# VisionLens
+
+[![CI](https://github.com/Aditya2616/VisionLens/actions/workflows/ci.yml/badge.svg)](https://github.com/Aditya2616/VisionLens/actions/workflows/ci.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 A multimodal pipeline that sees, labels and describes a scene: **detect, track, describe**.
 
 A detection model finds objects frame by frame, a tracker I wrote keeps their identities stable, and the track
 history is turned into a plain-language description. It runs offline, on a CPU or a GPU, with no API keys.
 
-![VisionLens on desktop and on a phone](docs/assets/hero.png)
+The tracking results are measured on synthetic scenes with exact ground truth only; there is no accuracy number for real footage (see Results).
 
-Open the static demo (recorded runs of the real pipeline, no backend) by serving `docs/` with any static server, or on
-GitHub Pages. Run it live (upload, webcam, your own clips) with `visionlens serve`.
+![VisionLens on desktop and on a phone: the recorded street-corner clip with tracked boxes, the generated description and the scene caption](docs/assets/hero.png)
+
+Open the static demo (recorded runs of the real pipeline, no backend) by serving `docs/` with any static server; there is
+no hosted copy yet, but the folder can be served by GitHub Pages. Run it live (upload, webcam, your own clips) with
+`visionlens serve`.
 
 Live mode (local server, your own upload, with the scene caption switched on) and the synthetic clip with the ground-truth layer:
 
-![Live mode](docs/assets/live-mode.png)
+![Live mode: an uploaded clip analysed by the local server, with the stage timings, the tracked boxes, the description and the scene caption](docs/assets/live-mode.png)
 
-<img src="docs/assets/phone-synthetic-ground-truth.png" width="300" alt="Phone, synthetic clip with ground truth"> <img src="docs/assets/phone-selected-track.png" width="400" alt="Compact labels, one track selected with its whole trail">
+<img src="docs/assets/phone-synthetic-ground-truth.png" width="260" alt="Phone layout, synthetic clip with the ground-truth layer switched on"> <img src="docs/assets/phone-selected-track.png" width="260" alt="Phone layout, one track selected with its whole trail on the street-corner clip">
 
-## What it does
+## How it works
 
 1. **Detect.** [D-FINE](https://arxiv.org/abs/2410.13842) nano (`ustc-community/dfine-nano-coco`) through Hugging Face
    Transformers. D-FINE small and RT-DETR r18vd are selectable for comparison; sizes, licences and published accuracy
@@ -43,7 +49,7 @@ confidence, raw detections can be flipped against tracks to see what the tracker
 an event timeline scrubs and seeks, and a stage strip shows the measured milliseconds of each stage and the device the
 detector ran on.
 
-## Architecture
+### Architecture
 
 ```mermaid
 flowchart LR
@@ -71,58 +77,7 @@ flowchart LR
 The result JSON (`src/visionlens/schemas.py`) is the one contract between the core, the CLI, the API, the page and the
 recorded demo. The server returns the original video plus per-frame JSON; the browser draws the overlay on a canvas.
 
-## Quickstart
-
-Python 3.10 or later (developed on 3.13). `pip` installs PyTorch and a matching torchvision; a CPU build is enough.
-
-```bash
-git clone https://github.com/Aditya2616/VisionLens.git
-cd VisionLens
-python -m venv .venv
-. .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -e .
-visionlens fetch-models         # one-time download of the models
-visionlens serve                # http://127.0.0.1:8106
-```
-
-<!-- RESULTS:downloads:start -->
-`visionlens fetch-models` downloads the default detector (15 MB). `--llm` adds the optional rewrite model, Qwen2.5-1.5B-Instruct (3.1 GB), `--caption` adds the optional scene captioner, SmolVLM-256M-Instruct (518 MB; only the weights and tokenizer files, not the repository's ONNX exports), and `--all` fetches everything in the models table (4.8 GB in total).
-<!-- RESULTS:downloads:end -->
-
-```bash
-visionlens run docs/demo/traffic.webm                  # writes outputs/traffic.visionlens.json and prints the description
-visionlens run docs/demo/traffic.webm --describer llm # plus the local model rewrite and the guard verdict
-visionlens run docs/demo/traffic.webm --caption        # plus the scene line from the vision-language model
-visionlens run docs/demo/still.jpg                     # a single image
-visionlens annotate docs/demo/traffic.webm outputs/traffic.visionlens.json   # draws boxes and ids into outputs/traffic.annotated.webm
-visionlens bench --out results/results.json            # every number in the Results section
-pytest && ruff check .                                 # fast tests; `pytest -m slow` runs the real-model tests
-python scripts/update_readme.py --check                # fails if the README numbers drift from their sources
-```
-
-`--out` changes where `run`, `annotate` and `make-synthetic` write; the default is `outputs/` (git-ignored) so nothing
-lands in the folder of the input. `--device cpu|cuda|auto` picks the device (default: CUDA when PyTorch can see a
-GPU, otherwise the CPU).
-
-Without the server, the demo in `docs/` works as a plain static site. It has to be served over HTTP, not opened as a
-file, so the video and JSON can load, and the server must support range requests so the video can seek:
-`python scripts/static_server.py 8000 docs`.
-
-### Live mode and the static demo
-
-| | Local server (`visionlens serve`) | Static `docs/` (GitHub Pages) |
-|---|---|---|
-| Recorded clips with scanner, toggles, timeline | yes | yes |
-| Run a bundled clip live | yes | no (explained on the page) |
-| Upload a video or image | yes | no |
-| Webcam | yes, only after you tap the button | no |
-
-<!-- RESULTS:limits:start -->
-Uploads are capped at 40 MB; only the first 20 s are analysed, at up to 640 px wide. They are written to a temporary folder and deleted when processing ends.
-<!-- RESULTS:limits:end -->
-The webcam starts only after an explicit tap; frames are processed on your machine and not stored.
-
-## Models
+### Models
 
 <!-- RESULTS:models:start -->
 | Hub id | Licence | Parameters (M) | Download | Published COCO AP (val) |
@@ -298,7 +253,7 @@ It is still a lexical parser, not a proof. It cannot see an invented setting ("a
 that keeps every id, number, direction and verb consistent but drops or reorders facts passes.
 
 <!-- RESULTS:retry_effect:start -->
-Effect of the retries: for `Qwen2.5-0.5B-Instruct` retries moved acceptance from 9 of 15 cases on the first try to 9 of 15 (mean 1.8 attempts); in 6 of its 6 final rejections every attempt failed for the same reason; for `Qwen2.5-1.5B-Instruct` retries moved acceptance from 7 of 15 cases on the first try to 13 of 15 (mean 1.8 attempts); in 1 of its 2 final rejections every attempt failed for the same reason.
+Effect of the retries: for `Qwen2.5-0.5B-Instruct` retries did not change acceptance (9 of 15; mean 1.8 attempts); in 6 of its 6 final rejections every attempt failed for the same reason; for `Qwen2.5-1.5B-Instruct` retries moved acceptance from 7 of 15 cases on the first try to 13 of 15 (mean 1.8 attempts); in 1 of its 2 final rejections every attempt failed for the same reason.
 <!-- RESULTS:retry_effect:end -->
 
 <!-- RESULTS:describer_choice:start -->
@@ -370,6 +325,94 @@ Recorded on 2026-11-12 with dfine-nano at stride 2; detector device: cuda (NVIDI
 | Single image | image | n/a | n/a | 59.9 ms (GPU) | none | “The image depicts a residential area with a mix of residential buildings and a few commercial establishments.” | 0.03 MB |
 <!-- RESULTS:demo:end -->
 
+These timings come from a recording made while the GPU was shared; see Limitations.
+
+## Quickstart
+
+Python 3.10 or later (developed on 3.13). `pip` installs PyTorch and a matching torchvision; a CPU build is enough.
+
+```bash
+git clone https://github.com/Aditya2616/VisionLens.git
+cd VisionLens
+python -m venv .venv
+. .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install -e .
+visionlens fetch-models         # one-time download of the models
+visionlens serve                # http://127.0.0.1:8106
+```
+
+<!-- RESULTS:downloads:start -->
+`visionlens fetch-models` downloads the default detector (15 MB). `--llm` adds the optional rewrite model, Qwen2.5-1.5B-Instruct (3.1 GB), `--caption` adds the optional scene captioner, SmolVLM-256M-Instruct (518 MB; only the weights and tokenizer files, not the repository's ONNX exports), and `--all` fetches everything in the models table (4.8 GB in total).
+<!-- RESULTS:downloads:end -->
+
+```bash
+visionlens run docs/demo/traffic.webm                  # writes outputs/traffic.visionlens.json and prints the description
+visionlens run docs/demo/traffic.webm --describer llm # plus the local model rewrite and the guard verdict
+visionlens run docs/demo/traffic.webm --caption        # plus the scene line from the vision-language model
+visionlens run docs/demo/still.jpg                     # a single image
+visionlens annotate docs/demo/traffic.webm outputs/traffic.visionlens.json   # draws boxes and ids into outputs/traffic.annotated.webm
+```
+
+`--out` changes where `run`, `annotate` and `make-synthetic` write; the default is `outputs/` (git-ignored) so nothing
+lands in the folder of the input. `--device cpu|cuda|auto` picks the device (default: CUDA when PyTorch can see a
+GPU, otherwise the CPU).
+
+## Reproduce and test
+
+`visionlens bench` writes every number in the Results section to `results/results.json`; `scripts/update_readme.py` regenerates the README blocks from it.
+
+```bash
+visionlens bench --out results/results.json            # runs every benchmark (GPU and CPU, several minutes)
+pytest && ruff check .                                 # fast tests; `pytest -m slow` runs the real-model tests
+python scripts/update_readme.py --check                # fails if the README numbers drift from their sources
+```
+
+The fast tests never load a model; `pytest -m slow` runs the real-model tests. The UI is checked with headless Chromium by `scripts/ui_check.py` (`--mode static` for the recorded demo, `--mode live` for upload, sample runs and the webcam).
+
+## Layout
+
+```
+src/visionlens/    detect/ track/ describe/ events.py pipeline.py synth.py metrics.py bench.py api.py cli.py ...
+tests/             fast offline tests (pytest); real-model tests are marked slow
+docs/              the web page (served by the API and by GitHub Pages) and the recorded demo in docs/demo/
+docs/notes/        my research notes and design spec
+scripts/           fetch_samples.py, fetch_facts.py, ui_check.py and screenshots.py (headless Chromium), static_server.py, update_readme.py
+data/              samples.json (clip credits), facts.json (model licences, sizes, published accuracy)
+results/           results.json, the output of `visionlens bench`
+```
+
+## Static demo
+
+Without the server, the demo in `docs/` works as a plain static site. It has to be served over HTTP, not opened as a
+file, so the video and JSON can load, and the server must support range requests so the video can seek:
+`python scripts/static_server.py 8000 docs`.
+
+| | Local server (`visionlens serve`) | Static `docs/` (GitHub Pages) |
+|---|---|---|
+| Recorded clips with scanner, toggles, timeline | yes | yes |
+| Run a bundled clip live | yes | no (explained on the page) |
+| Upload a video or image | yes | no |
+| Webcam | yes, only after you tap the button | no |
+
+<!-- RESULTS:limits:start -->
+Uploads are capped at 40 MB; only the first 20 s are analysed, at up to 640 px wide. They are written to a temporary folder and deleted when processing ends.
+<!-- RESULTS:limits:end -->
+The webcam starts only after an explicit tap; frames are processed on your machine and not stored.
+
+### Browser support
+
+- **Chromium:** VP9 WebM plays; checked with headless Chromium at 1440x900 and at 390x844 with touch.
+- **Safari:** per [caniuse](https://caniuse.com/webm) (WebM video format), Safari supports WebM from 14.1 on macOS 11.3
+  and later and from 17.4 on iOS. I have no iPhone or Safari here and have not tested it.
+- **Fallback for browsers without VP9 WebM:** the page shows a frame sequence (a sprite sheet of 5 frames per second
+  drawn on a canvas) so the demo is never blank; the overlay and timeline work the same, but the picture is lower
+  resolution and choppier. I tested it by forcing it (`?player=sprite`) in Chromium and in Playwright's WebKit build with
+  the iPhone 14 profile and at 1440x900 on 2026-11-13: no console errors, no horizontal scroll, and tap play, box
+  selection, timeline seek and clip switching all work, with boxes matching Chromium's. The WebM video path could not be
+  checked in that WebKit build (Windows), because it cannot play any media. None of this was on a physical iPhone or in
+  real Safari.
+- **Playback** always starts from a tap; nothing autoplays.
+
 ## Design decisions
 
 - **Stride detection.** At CPU speeds a detector cannot run on every frame of a 15 fps clip. Running it every few
@@ -387,32 +430,6 @@ Recorded on 2026-11-12 with dfine-nano at stride 2; detector device: cuda (NVIDI
 - **The captioner is opt-in and kept apart.** The site promises a multimodal pipeline, and events cannot say what kind
   of place a clip shows, so a small vision-language model captions a few key frames. Its line is labelled, separate
   from the event sentences, cross-checked against the detector's classes, and off by default because of its cost.
-
-## Browser support
-
-- Chromium: VP9 WebM plays; checked with headless Chromium at 1440x900 and at 390x844 with touch.
-- Safari: per [caniuse](https://caniuse.com/webm) (WebM video format), Safari supports WebM from 14.1 on macOS 11.3
-  and later and from 17.4 on iOS. I have no iPhone or Safari here and have not tested it. For browsers that cannot
-  play VP9 WebM the page falls back to a frame sequence (a sprite sheet of 5 frames per second drawn on a canvas) so
-  the demo is never blank; the overlay and timeline work the same, but the picture is lower resolution and choppier.
-  I tested that fallback by forcing it (`?player=sprite`) in Chromium, not on a real older iPhone.
-- WebKit: I checked the frame-sequence fallback (`?player=sprite`) in Playwright's WebKit build with the iPhone 14
-  profile and at 1440x900 on 2026-11-13: no console errors, no horizontal scroll, tap play, box selection, timeline
-  seek and clip switching all work, and the boxes match Chromium's. The WebM video path could not be checked there,
-  because that WebKit build (Windows) cannot play any media. None of this was on a physical iPhone or in real Safari.
-- Playback always starts from a tap; nothing autoplays.
-
-## Layout
-
-```
-src/visionlens/    detect/ track/ describe/ events.py pipeline.py synth.py metrics.py bench.py api.py cli.py ...
-tests/             fast offline tests (pytest); real-model tests are marked slow
-docs/              the web page (served by the API and by GitHub Pages) and the recorded demo in docs/demo/
-docs/notes/        my research notes and design spec
-scripts/           fetch_samples.py, fetch_facts.py, ui_check.py (headless Chromium), static_server.py, update_readme.py
-data/              samples.json (clip credits), facts.json (model licences, sizes, published accuracy)
-results/           results.json, the output of `visionlens bench`
-```
 
 ## Limitations
 

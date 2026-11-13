@@ -98,6 +98,7 @@ export class Overlay {
       if (p >= 1) { this.scan = null; this.scanDone = true; } else scanX = p * W;
     }
 
+    this.labelRects = [];
     if (layers.gt && data.ground_truth) this._gt(data.ground_truth[fi] || [], sx, sy, k);
     if (layers.dets) this._dets(data.frames[this.lastDet[fi]]?.dets || [], sx, sy, k, scanX);
     if (layers.trails) this._trails(fr, fi, sx, sy, k, scanX);
@@ -233,7 +234,8 @@ export class Overlay {
     const { ctx } = this;
     const ch = 16 * k;
     const gap = 2 * k;
-    const placed = [];
+    // the FRAME / SCAN readout in the top-left corner is reserved so chips never sit under it
+    const placed = [{ x: 0, y: 0, w: 118 * k, h: 40 * k }];
     const hit = (r) => placed.some((p) => r.x < p.x + p.w + gap && r.x + r.w + gap > p.x && r.y < p.y + p.h + gap && r.y + r.h + gap > p.y);
     ctx.font = `600 ${10 * k}px ${MONO}`;
     ctx.textBaseline = 'middle';
@@ -274,6 +276,7 @@ export class Overlay {
         continue;
       }
       placed.push(spot);
+      (this.labelRects ||= []).push(spot);
       const edgeY = spot.above ? spot.y + spot.h : spot.y;
       const gapPx = spot.above ? it.by - (spot.y + spot.h) : spot.y - it.by;
       if (gapPx > 4 * k) { // displaced: leader line to the box corner
@@ -329,8 +332,17 @@ export class Overlay {
       ctx.stroke();
       if (p < 0.7) {
         ctx.font = `600 ${8.5 * k}px ${MONO}`;
-        ctx.fillStyle = warn ? EMBER : LIME;
-        ctx.fillText(e.kind.toUpperCase().replace('_', ' '), e.pos[0] * sx + r + 4 * k, e.pos[1] * sy + 3 * k);
+        const word = e.kind.toUpperCase().replace('_', ' ');
+        const tx = e.pos[0] * sx + r + 4 * k;
+        const ty = e.pos[1] * sy + 3 * k;
+        const box = { x: tx - 2 * k, y: ty - 10 * k, w: ctx.measureText(word).width + 4 * k, h: 14 * k };
+        // the word is dropped where it would run over a label chip or off the picture, the ring stays
+        const clear = box.x + box.w < this.W - 2 && !(this.labelRects || []).some(
+          (q) => box.x < q.x + q.w && box.x + box.w > q.x && box.y < q.y + q.h && box.y + box.h > q.y);
+        if (clear) {
+          ctx.fillStyle = warn ? EMBER : LIME;
+          ctx.fillText(word, tx, ty);
+        }
       }
       ctx.restore();
     }
